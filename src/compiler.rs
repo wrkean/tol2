@@ -1,59 +1,69 @@
-use std::{
-    collections::HashMap,
-    fs, io,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path, rc::Rc};
 
 use logos::Logos;
 
-use crate::{args::Args, module::Module, token::Token};
+use crate::{args::Args, module::compiled_module::CompiledModule, token::Token};
 
-pub struct CompilerContext<'cctx> {
-    main_module: Module<'cctx>,
-    stdlib: Module<'cctx>,
-    external_modules: HashMap<String, Module<'cctx>>,
-    source_code: String,
-
-    source_file: Option<PathBuf>,
-    dev_debug: bool,
+pub struct ModuleRegistry<'com> {
+    main_module: Option<CompiledModule<'com>>,
+    stdlib: Option<CompiledModule<'com>>,
+    cache: HashMap<String, Rc<CompiledModule<'com>>>,
 }
 
-impl<'cctx> CompilerContext<'cctx> {
-    pub fn new(args: Args) -> Self {
+impl<'com> ModuleRegistry<'com> {
+    pub fn new() -> Self {
         Self {
-            main_module: Module::new(None),
-            stdlib: Self::load_stdlib(),
-            external_modules: HashMap::new(),
-            source_code: String::new(),
-
-            source_file: args.source_path,
-            dev_debug: args.dev_debug,
+            main_module: None,
+            stdlib: None,
+            cache: HashMap::new(),
         }
     }
 
-    pub fn run(&mut self) -> io::Result<()> {
-        if self.source_file.is_none() {
-            return Ok(());
-        }
-
-        self.source_code = self.read_source()?;
-
-        for lex in Token::lexer(&self.source_code) {
-            todo!()
-        }
-
+    pub fn cache(&mut self) {
         todo!()
     }
 
-    fn load_stdlib() -> Module<'cctx> {
-        todo!();
+    pub fn is_main_loaded(&self) -> bool {
+        self.main_module.is_some()
     }
 
-    fn read_source(&self) -> io::Result<String> {
-        if let Some(path) = &self.source_file {
-            fs::read_to_string(path)
-        } else {
-            unreachable!("Ensure self.source_file option is checked before this call");
+    pub fn is_stdlib_loaded(&self) -> bool {
+        self.stdlib.is_some()
+    }
+}
+
+impl<'com> Default for ModuleRegistry<'com> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct Compiler<'com> {
+    module_registry: ModuleRegistry<'com>,
+    source_code: String,
+
+    config: Args,
+}
+
+impl<'com> Compiler<'com> {
+    pub fn new(args: Args, source_code: String) -> Self {
+        Self {
+            module_registry: ModuleRegistry::new(),
+            source_code,
+
+            config: args,
         }
+    }
+
+    pub fn run(&self) {
+        let tokens = Token::lexer(&self.source_code);
+
+        for tok in tokens {
+            todo!()
+        }
+    }
+
+    pub fn load_stdlib(&mut self, stdlib_path: &Path) {
+        todo!()
     }
 }

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::Parser;
 
@@ -11,9 +11,19 @@ use crate::{ABOUT, AUTHOR, VERSION};
     about = ABOUT,
 )]
 pub struct Args {
-    #[arg(value_name = "SOURCE_FILE")]
-    pub source_path: Option<PathBuf>,
+    #[arg(required = true, value_name = "SOURCE_FILE")]
+    source_path: PathBuf,
 
     #[arg(short = 'D', long = "dev-debug", default_value_t = false)]
-    pub dev_debug: bool,
+    dev_debug: bool,
+}
+
+impl Args {
+    pub fn dev_debug(&self) -> bool {
+        self.dev_debug
+    }
+
+    pub fn source_path(&self) -> &Path {
+        &self.source_path
+    }
 }
