@@ -1,0 +1,33 @@
+program = { statement } ;
+statement = variable_declaration
+    | const_declaration
+    | function_declaration
+    | for_statement
+    | while_statement ;
+variable_declaration = "ang" , identifier , ":" , type , "=" expression ";" ;
+const_declaration = "dapat" , identifier , ":" , type , "=" expression ";" ;
+function_declaration = "paraan" , identifier , "(" , [ parameter_list ] , ")" , block ;
+param = identifier , ":" , type
+parameter_list = param , { ","  param } , [ "," ] ;
+for_statement = "sa" , expression , [ "=>" , identifier ] , block ;
+while_statement = "habang" , [ expression ] , block ;
+expression = number
+    | boolean
+    | string
+    | arithmetic
+    | equality
+    | relational
+    | block ;
+number = integer | float ;
+integer = digit , { digit | "_" } ;
+float = integer , "." , integer ;
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+boolean = "tama" | "mali" ;
+string = '"' , character , '"' ;
+character = ? any Unicode character except '"' and '\' ?
+    | '\' , escape_sequence ;
+escape_sequence = '"' | '\' | 'n' | 't' ;
+arithmetic = number , ( "+" | "-" | "*" | "/" ) , number ;
+equality = number , ( "!=" | "==" ) , number ;
+relational = number , ( ">" | ">=" | "<" | "<=" ) , number ;
+block = "{" , { statement } , [ expression ] , "}" ;
