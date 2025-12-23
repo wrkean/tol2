@@ -1,7 +1,7 @@
 use clap::Parser;
 use tol2::{args::Args, driver::compile};
 
-fn main() {
+fn main() -> miette::Result<()> {
     let args = Args::parse();
-    compile(args);
+    compile(args).map_err(miette::Report::new)
 }
