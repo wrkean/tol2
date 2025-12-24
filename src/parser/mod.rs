@@ -8,7 +8,7 @@ use crate::{
     error::CompilerError,
     lexer::token::{Token, TokenKind},
     module::{lexed_module::LexedModule, parsed_module::ParsedModule},
-    parser::operator_db::TolOp,
+    parser::operator_db::{Assoc, TolOp},
     toltype::TolType,
 };
 
@@ -78,6 +78,7 @@ impl Parser {
 
     fn parse_type(&self) -> Result<TolType, CompilerError> {
         let current_tok = self.peek()?;
+
         match &current_tok.kind {
             TokenKind::Identifier => Ok(current_tok.lexeme.as_str().into()),
             _ => Err(CompilerError::UnexpectedToken {
@@ -136,15 +137,31 @@ impl Parser {
         let assoc = TolOp::assoc(&op.kind);
 
         match &op.kind {
-            TokenKind::Plus => {
-                let right = self.parse_expression(prec)?;
-
-                Ok(Expr::new(ExprKind::Add {
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }))
+            TokenKind::Plus | TokenKind::Minus | TokenKind::Star | TokenKind::Slash => {
+                self.parse_arithmetic(op, left, prec, assoc)
             }
             _ => todo!(),
+        }
+    }
+
+    fn parse_arithmetic(
+        &mut self,
+        op: &Token,
+        left: Expr,
+        prec: u8,
+        assoc: Assoc,
+    ) -> Result<Expr, CompilerError> {
+        let left = Box::new(left);
+        let right = Box::new(match assoc {
+            Assoc::Left => self.parse_expression(prec)?,
+            Assoc::Right => self.parse_expression(prec + 1)?,
+        });
+        match &op.kind {
+            TokenKind::Plus => Ok(Expr::new(ExprKind::Add { left, right })),
+            TokenKind::Minus => Ok(Expr::new(ExprKind::Add { left, right })),
+            TokenKind::Star => Ok(Expr::new(ExprKind::Add { left, right })),
+            TokenKind::Slash => Ok(Expr::new(ExprKind::Add { left, right })),
+            _ => unreachable!(),
         }
     }
 
@@ -204,5 +221,24 @@ mod test {
     fn expression_output() {
         let mut parser = init_dummy_parser("10 + 50");
         dbg!(parser.parse_expression(0).unwrap());
+    }
+
+    #[test]
+    fn parses_add() {
+        let mut parser = init_dummy_parser("67 + 41");
+        if let ExprKind::Add { left, right } = &parser.parse_expression(0).unwrap().kind {
+            match (&left.kind, &right.kind) {
+                (ExprKind::Integer { lexeme: lt }, ExprKind::Integer { lexeme: rt }) => {
+                    assert_eq!(&lt.lexeme, "67");
+                    assert_eq!(&rt.lexeme, "41");
+                }
+                _ => panic!(
+                    "Expected integer to integer but found `{:?}` to `{:?}`",
+                    &left.kind, &right.kind
+                ),
+            }
+        } else {
+            panic!("Expected add expr")
+        }
     }
 }
