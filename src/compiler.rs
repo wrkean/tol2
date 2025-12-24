@@ -4,7 +4,7 @@ use logos::Logos;
 use miette::NamedSource;
 
 use crate::{
-    args::Args, error::CompilerError, module::compiled_module::CompiledModule, token::Token,
+    args::Args, error::CompilerError, module::compiled_module::CompiledModule, token::TokenKind,
 };
 
 pub struct ModuleRegistry<'com> {
@@ -60,13 +60,13 @@ impl<'com> Compiler<'com> {
     }
 
     pub fn run(&self) -> Result<(), Vec<CompilerError>> {
-        let tokens = Token::lexer(&self.source_code);
+        let tokens = TokenKind::lexer(&self.source_code);
         let mut errors = Vec::new();
 
         for tok in tokens {
             match tok {
-                Ok(tok) => {
-                    println!("Lexed: {:?}", tok);
+                Ok(t) => {
+                    println!("Lexed: {:?}", t);
                 }
                 Err(e) => {
                     errors.push(CompilerError::Lexer {

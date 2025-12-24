@@ -4,7 +4,7 @@ use colored::Colorize;
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use thiserror::Error;
 
-use crate::token::Token;
+use crate::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum CompilerError {
@@ -71,7 +71,7 @@ impl LexingError {
         }
     }
 
-    pub fn unterminated_string(lexer: &mut logos::Lexer<Token>) -> Result<(), LexingError> {
+    pub fn unterminated_string(lexer: &mut logos::Lexer<TokenKind>) -> Result<(), LexingError> {
         let start = lexer.span().start;
         let remainder = lexer.remainder();
 
@@ -90,7 +90,7 @@ impl LexingError {
         })
     }
 
-    pub fn invalid_char(lexer: &mut logos::Lexer<Token>) -> LexingError {
+    pub fn invalid_char(lexer: &mut logos::Lexer<TokenKind>) -> LexingError {
         let start = lexer.span().start;
         let remainder = lexer.remainder();
 

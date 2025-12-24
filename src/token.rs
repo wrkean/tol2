@@ -1,12 +1,20 @@
+use std::ops::Range;
+
 use logos::Logos;
 
 use crate::error::LexingError;
+
+pub struct Token {
+    pub kind: TokenKind,
+    pub lexeme: String,
+    pub span: Range<usize>,
+}
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip(r"[ \t\f\r\n]+"))]
 #[logos(utf8 = true)]
 #[logos(error(LexingError, LexingError::invalid_char))]
-pub enum Token {
+pub enum TokenKind {
     // Keywords
     #[token("ang")]
     Ang,
@@ -86,18 +94,18 @@ mod test {
 
     #[test]
     fn lex_single_token() {
-        let mut tokens = Token::lexer("+-*/");
+        let mut tokens = TokenKind::lexer("+-*/");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Plus)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Plus)));
         assert_eq!(tokens.slice(), "+");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Minus)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Minus)));
         assert_eq!(tokens.slice(), "-");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Star)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Star)));
         assert_eq!(tokens.slice(), "*");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Slash)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Slash)));
         assert_eq!(tokens.slice(), "/");
 
         assert_eq!(tokens.next(), None);
@@ -105,21 +113,21 @@ mod test {
 
     #[test]
     fn lex_keywords() {
-        let mut tokens = Token::lexer("ang dapat paraan sa habang");
+        let mut tokens = TokenKind::lexer("ang dapat paraan sa habang");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Ang)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Ang)));
         assert_eq!(tokens.slice(), "ang");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Dapat)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Dapat)));
         assert_eq!(tokens.slice(), "dapat");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Paraan)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Paraan)));
         assert_eq!(tokens.slice(), "paraan");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Sa)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Sa)));
         assert_eq!(tokens.slice(), "sa");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Habang)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Habang)));
         assert_eq!(tokens.slice(), "habang");
 
         assert_eq!(tokens.next(), None);
@@ -127,7 +135,7 @@ mod test {
 
     #[test]
     fn ignores_comments() {
-        let mut tokens = Token::lexer(
+        let mut tokens = TokenKind::lexer(
             r#"// Compiler, ignore this
 // Ignore this too
 "#,
@@ -139,18 +147,18 @@ mod test {
 
     #[test]
     fn lex_identifiers_and_numbers() {
-        let mut tokens = Token::lexer("foo bar 123 45.67");
+        let mut tokens = TokenKind::lexer("foo bar 123 45.67");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Identifier)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Identifier)));
         assert_eq!(tokens.slice(), "foo");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Identifier)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Identifier)));
         assert_eq!(tokens.slice(), "bar");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Integer)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Integer)));
         assert_eq!(tokens.slice(), "123");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Float)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Float)));
         assert_eq!(tokens.slice(), "45.67");
 
         assert_eq!(tokens.next(), None);
@@ -158,57 +166,57 @@ mod test {
 
     #[test]
     fn lex_mixed_operators_and_delimiters() {
-        let mut tokens = Token::lexer("(){}:; => == != <= >= < > + - * /");
+        let mut tokens = TokenKind::lexer("(){}:; => == != <= >= < > + - * /");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::LParen)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::LParen)));
         assert_eq!(tokens.slice(), "(");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::RParen)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::RParen)));
         assert_eq!(tokens.slice(), ")");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::LBrace)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::LBrace)));
         assert_eq!(tokens.slice(), "{");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::RBrace)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::RBrace)));
         assert_eq!(tokens.slice(), "}");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Colon)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Colon)));
         assert_eq!(tokens.slice(), ":");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Semicolon)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Semicolon)));
         assert_eq!(tokens.slice(), ";");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Arrow)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Arrow)));
         assert_eq!(tokens.slice(), "=>");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::EqualEqual)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::EqualEqual)));
         assert_eq!(tokens.slice(), "==");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::BangEqual)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::BangEqual)));
         assert_eq!(tokens.slice(), "!=");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::LessEqual)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::LessEqual)));
         assert_eq!(tokens.slice(), "<=");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::GreaterEqual)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::GreaterEqual)));
         assert_eq!(tokens.slice(), ">=");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Less)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Less)));
         assert_eq!(tokens.slice(), "<");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Greater)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Greater)));
         assert_eq!(tokens.slice(), ">");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Plus)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Plus)));
         assert_eq!(tokens.slice(), "+");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Minus)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Minus)));
         assert_eq!(tokens.slice(), "-");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Star)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Star)));
         assert_eq!(tokens.slice(), "*");
 
-        assert_eq!(tokens.next(), Some(Ok(Token::Slash)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::Slash)));
         assert_eq!(tokens.slice(), "/");
 
         assert_eq!(tokens.next(), None);
@@ -216,15 +224,15 @@ mod test {
 
     #[test]
     fn lex_strings() {
-        let mut tokens = Token::lexer(r#""hello" "escaped\n" "quotes\"inside""#);
+        let mut tokens = TokenKind::lexer(r#""hello" "escaped\n" "quotes\"inside""#);
 
-        assert_eq!(tokens.next(), Some(Ok(Token::String)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::String)));
         assert_eq!(tokens.slice(), r#""hello""#);
 
-        assert_eq!(tokens.next(), Some(Ok(Token::String)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::String)));
         assert_eq!(tokens.slice(), r#""escaped\n""#);
 
-        assert_eq!(tokens.next(), Some(Ok(Token::String)));
+        assert_eq!(tokens.next(), Some(Ok(TokenKind::String)));
         assert_eq!(tokens.slice(), r#""quotes\"inside""#);
 
         assert_eq!(tokens.next(), None);
@@ -232,7 +240,7 @@ mod test {
 
     #[test]
     fn lex_unterminated_string() {
-        let mut tokens = Token::lexer(r#""This is an unterminated string literal"#);
+        let mut tokens = TokenKind::lexer(r#""This is an unterminated string literal"#);
 
         assert!(matches!(tokens.next(), Some(Err(_))));
 
@@ -241,7 +249,7 @@ mod test {
 
     #[test]
     fn lex_invalid_char() {
-        let mut tokens = Token::lexer("#?");
+        let mut tokens = TokenKind::lexer("#?");
 
         assert!(matches!(tokens.next(), Some(Err(_))));
 
