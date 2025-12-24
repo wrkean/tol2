@@ -1,8 +1,11 @@
 use logos::Logos;
 
+use crate::error::LexingError;
+
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip(r"[ \t\f\r\n]+"))]
 #[logos(utf8 = true)]
+#[logos(error(LexingError, LexingError::invalid_char))]
 pub enum Token {
     // Keywords
     #[token("ang")]
@@ -69,6 +72,8 @@ pub enum Token {
     Float,
     #[regex(r#""([^"\\]|\\.)*""#)]
     String,
+    #[regex(r#"""#, LexingError::unterminated_string)]
+    UnterminatedString,
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Identifier,
     #[regex(r"//[^\n]*", logos::skip, allow_greedy = true)]
@@ -221,6 +226,24 @@ mod test {
 
         assert_eq!(tokens.next(), Some(Ok(Token::String)));
         assert_eq!(tokens.slice(), r#""quotes\"inside""#);
+
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn lex_unterminated_string() {
+        let mut tokens = Token::lexer(r#""This is an unterminated string literal"#);
+
+        assert!(matches!(tokens.next(), Some(Err(_))));
+
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn lex_invalid_char() {
+        let mut tokens = Token::lexer("#?");
+
+        assert!(matches!(tokens.next(), Some(Err(_))));
 
         assert_eq!(tokens.next(), None);
     }

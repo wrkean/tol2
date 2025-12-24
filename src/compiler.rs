@@ -1,12 +1,16 @@
 use std::{collections::HashMap, path::Path, rc::Rc};
 
 use logos::Logos;
+use miette::NamedSource;
 
-use crate::{args::Args, module::compiled_module::CompiledModule, token::Token};
+use crate::{
+    args::Args, error::CompilerError, module::compiled_module::CompiledModule, token::Token,
+};
 
 pub struct ModuleRegistry<'com> {
     main_module: Option<CompiledModule<'com>>,
     stdlib: Option<CompiledModule<'com>>,
+    #[allow(dead_code)]
     cache: HashMap<String, Rc<CompiledModule<'com>>>,
 }
 
@@ -55,13 +59,34 @@ impl<'com> Compiler<'com> {
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&self) -> Result<(), Vec<CompilerError>> {
         let tokens = Token::lexer(&self.source_code);
+        let mut errors = Vec::new();
 
         for tok in tokens {
-            todo!()
+            match tok {
+                Ok(tok) => {
+                    println!("Lexed: {:?}", tok);
+                }
+                Err(e) => {
+                    errors.push(CompilerError::Lexer {
+                        message: e.to_string(),
+                        src: NamedSource::new("some.tol", self.source_code.clone()),
+                        span: e.span().into(),
+                        help: e.help().map(|s| s.to_string()),
+                    });
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
+
+    // pub fn lex(&self) -> Result<LexedModule, CompilerError> {}
 
     pub fn load_stdlib(&mut self, stdlib_path: &Path) {
         todo!()
