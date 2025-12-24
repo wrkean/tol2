@@ -36,6 +36,12 @@ impl Lexer {
             }
         }
 
-        (LexedModule { tokens }, errors)
+        (
+            LexedModule {
+                tokens,
+                src_filename: source_file_name.to_string(),
+            },
+            errors,
+        )
     }
 }
