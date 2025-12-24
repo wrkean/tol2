@@ -4,7 +4,10 @@ use logos::Logos;
 use miette::NamedSource;
 
 use crate::{
-    args::Args, error::CompilerError, module::compiled_module::CompiledModule, token::TokenKind,
+    args::Args,
+    error::CompilerError,
+    module::compiled_module::CompiledModule,
+    token::{Token, TokenKind},
 };
 
 pub struct ModuleRegistry<'com> {
@@ -60,17 +63,21 @@ impl<'com> Compiler<'com> {
     }
 
     pub fn run(&self) -> Result<(), Vec<CompilerError>> {
-        let tokens = TokenKind::lexer(&self.source_code);
+        let mut kind_iter = TokenKind::lexer(&self.source_code);
         let mut errors = Vec::new();
+        let mut tokens = Vec::new();
 
-        for tok in tokens {
-            match tok {
-                Ok(t) => {
-                    println!("Lexed: {:?}", t);
-                }
+        while let Some(tk) = kind_iter.next() {
+            match tk {
+                Ok(t) => tokens.push(Token {
+                    kind: t,
+                    lexeme: kind_iter.slice().to_string(),
+                    span: kind_iter.span(),
+                }),
                 Err(e) => {
                     errors.push(CompilerError::Lexer {
                         message: e.to_string(),
+                        // FIXME: "some.tol is a placeholder, replace it."
                         src: NamedSource::new("some.tol", self.source_code.clone()),
                         span: e.span().into(),
                         help: e.help().map(|s| s.to_string()),
