@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::{token::Token, visitor::expr_visitor::ExprVisitor};
+use crate::{lexer::token::Token, visitor::expr_visitor::ExprVisitor};
 
 pub struct Expr {
     pub kind: ExprKind,

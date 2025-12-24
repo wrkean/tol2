@@ -10,4 +10,5 @@ pub mod error;
 pub mod module;
 pub mod visitor;
 
-mod token;
+mod lexer;
+mod parser;

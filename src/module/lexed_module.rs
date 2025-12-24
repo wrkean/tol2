@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 
 pub struct LexedModule {
     pub tokens: Vec<Token>,

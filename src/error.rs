@@ -4,7 +4,7 @@ use colored::Colorize;
 use miette::{Diagnostic, NamedSource, SourceSpan};
 use thiserror::Error;
 
-use crate::token::TokenKind;
+use crate::lexer::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum CompilerError {

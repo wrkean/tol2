@@ -1,13 +1,7 @@
 use std::path::Path;
 
-use logos::Logos;
-use miette::NamedSource;
-
 use crate::{
-    args::Args,
-    error::CompilerError,
-    module::{lexed_module::LexedModule, module_registry::ModuleRegistry},
-    token::{Token, TokenKind},
+    args::Args, error::CompilerError, lexer::Lexer, module::module_registry::ModuleRegistry,
 };
 
 pub struct Compiler<'com> {
@@ -28,40 +22,22 @@ impl<'com> Compiler<'com> {
     }
 
     pub fn run(&self) -> Result<(), Vec<CompilerError>> {
-        let (lexed_mod, mut errors) = self.lex();
+        // This here is guaranteed to be a filename as it is checked by the driver beforehand
+        // WARN: Have better handling for this
+        let source_file_name = self
+            .config
+            .source_path()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let (lexed_mod, mut errors) = Lexer::lex(&self.source_code, source_file_name);
 
         if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
         }
-    }
-
-    pub fn lex(&self) -> (LexedModule, Vec<CompilerError>) {
-        let mut tokens = Vec::new();
-        let mut errors = Vec::new();
-
-        let mut kind_iter = TokenKind::lexer(&self.source_code);
-        while let Some(tk) = kind_iter.next() {
-            match tk {
-                Ok(t) => tokens.push(Token {
-                    kind: t,
-                    lexeme: kind_iter.slice().to_string(),
-                    span: kind_iter.span(),
-                }),
-                Err(e) => {
-                    errors.push(CompilerError::Lexer {
-                        message: e.to_string(),
-                        // FIXME: "some.tol is a placeholder, replace it."
-                        src: NamedSource::new("some.tol", self.source_code.clone()),
-                        span: e.span().into(),
-                        help: e.help().map(|s| s.to_string()),
-                    });
-                }
-            }
-        }
-
-        (LexedModule { tokens }, errors)
     }
 
     pub fn load_stdlib(&mut self, stdlib_path: &Path) {

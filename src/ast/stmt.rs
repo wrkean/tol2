@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::{token::Token, visitor::stmt_visitor::StmtVisitor};
+use crate::{lexer::token::Token, visitor::stmt_visitor::StmtVisitor};
 
 pub struct Stmt {
     pub kind: StmtKind,
