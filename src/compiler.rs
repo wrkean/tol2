@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::path::Path;
 
 use logos::Logos;
 use miette::NamedSource;
@@ -6,44 +6,9 @@ use miette::NamedSource;
 use crate::{
     args::Args,
     error::CompilerError,
-    module::compiled_module::CompiledModule,
+    module::{lexed_module::LexedModule, module_registry::ModuleRegistry},
     token::{Token, TokenKind},
 };
-
-pub struct ModuleRegistry<'com> {
-    main_module: Option<CompiledModule<'com>>,
-    stdlib: Option<CompiledModule<'com>>,
-    #[allow(dead_code)]
-    cache: HashMap<String, Rc<CompiledModule<'com>>>,
-}
-
-impl<'com> ModuleRegistry<'com> {
-    pub fn new() -> Self {
-        Self {
-            main_module: None,
-            stdlib: None,
-            cache: HashMap::new(),
-        }
-    }
-
-    pub fn cache(&mut self) {
-        todo!()
-    }
-
-    pub fn is_main_loaded(&self) -> bool {
-        self.main_module.is_some()
-    }
-
-    pub fn is_stdlib_loaded(&self) -> bool {
-        self.stdlib.is_some()
-    }
-}
-
-impl<'com> Default for ModuleRegistry<'com> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 pub struct Compiler<'com> {
     module_registry: ModuleRegistry<'com>,
@@ -63,10 +28,20 @@ impl<'com> Compiler<'com> {
     }
 
     pub fn run(&self) -> Result<(), Vec<CompilerError>> {
-        let mut kind_iter = TokenKind::lexer(&self.source_code);
-        let mut errors = Vec::new();
-        let mut tokens = Vec::new();
+        let (lexed_mod, mut errors) = self.lex();
 
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    pub fn lex(&self) -> (LexedModule, Vec<CompilerError>) {
+        let mut tokens = Vec::new();
+        let mut errors = Vec::new();
+
+        let mut kind_iter = TokenKind::lexer(&self.source_code);
         while let Some(tk) = kind_iter.next() {
             match tk {
                 Ok(t) => tokens.push(Token {
@@ -86,14 +61,8 @@ impl<'com> Compiler<'com> {
             }
         }
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
+        (LexedModule { tokens }, errors)
     }
-
-    // pub fn lex(&self) -> Result<LexedModule, CompilerError> {}
 
     pub fn load_stdlib(&mut self, stdlib_path: &Path) {
         todo!()
