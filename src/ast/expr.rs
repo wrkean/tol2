@@ -2,11 +2,13 @@ use std::ops::Range;
 
 use crate::{lexer::token::Token, visitor::expr_visitor::ExprVisitor};
 
+#[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
     pub span: Range<usize>,
 }
 
+#[derive(Debug)]
 pub enum ExprKind {
     Integer { lexeme: Token },
     Float { lexeme: Token },

@@ -8,7 +8,7 @@ use crate::lexer::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum CompilerError {
-    #[error("{}: {}", "MALI SA LEXER".bright_red(), message)]
+    #[error("{}: {}", "Mali sa lexer".bright_red(), message)]
     Lexer {
         message: String,
 
@@ -22,8 +22,26 @@ pub enum CompilerError {
         help: Option<String>,
     },
 
-    #[error("{}", "MALI SA I/O".bright_red())]
+    #[error("{}", "Mali sa I/O".bright_red())]
     IO(#[from] std::io::Error),
+
+    #[error("{}", "Hindi inaasahang pagtatapos ng input".bright_red())]
+    #[diagnostic(help("ito ay hindi madalas mangyari, maaaring bug ito sa compiler."))]
+    UnexpectedEndOfInput,
+
+    #[error("{}", "Hindi inaasahang token".bright_red())]
+    UnexpectedToken {
+        expected: String,
+
+        #[source_code]
+        src: NamedSource<String>,
+
+        #[label("Umasa ng `{}` ito ang naibigay", &expected)]
+        span: SourceSpan,
+
+        #[help]
+        help: Option<String>,
+    },
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]

@@ -40,6 +40,7 @@ impl Lexer {
             LexedModule {
                 tokens,
                 src_filename: source_file_name.to_string(),
+                source_code: source_code.to_string(),
             },
             errors,
         )

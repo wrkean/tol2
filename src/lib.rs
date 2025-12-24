@@ -12,3 +12,4 @@ pub mod visitor;
 
 mod lexer;
 mod parser;
+pub mod toltype;

@@ -1,12 +1,16 @@
 use std::ops::Range;
 
-use crate::{lexer::token::Token, visitor::stmt_visitor::StmtVisitor};
+use crate::{
+    ast::expr::Expr, lexer::token::Token, toltype::TolType, visitor::stmt_visitor::StmtVisitor,
+};
 
+#[derive(Debug)]
 pub struct Stmt {
     pub kind: StmtKind,
     pub span: Range<usize>,
 }
 
+#[derive(Debug)]
 pub enum StmtKind {
     Paraan {
         id: Token,
@@ -16,8 +20,8 @@ pub enum StmtKind {
     },
     Ang {
         id: Token,
-        // ttype: TolType,
-        // rhs: Expr,
+        ttype: TolType,
+        rhs: Expr,
     },
     Ibalik {
         id: Token,
@@ -26,13 +30,7 @@ pub enum StmtKind {
 }
 
 impl Stmt {
-    pub fn new(kind: StmtKind) -> Self {
-        let span = match &kind {
-            // TODO: Change this later when more ast nodes are created
-            StmtKind::Ang { id } => id.span.clone(),
-            StmtKind::Paraan { id } => id.span.clone(),
-            StmtKind::Ibalik { id } => id.span.clone(),
-        };
+    pub fn new(kind: StmtKind, span: Range<usize>) -> Self {
         Self { kind, span }
     }
 
@@ -43,4 +41,9 @@ impl Stmt {
             StmtKind::Ibalik { .. } => visitor.visit_ibalik(self),
         }
     }
+}
+
+pub struct ParamInfo {
+    id: String,
+    ttype: TolType,
 }

@@ -4,13 +4,14 @@ use logos::Logos;
 
 use crate::error::LexingError;
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub lexeme: String,
     pub span: Range<usize>,
 }
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip(r"[ \t\f\r\n]+"))]
 #[logos(utf8 = true)]
 #[logos(error(LexingError, LexingError::invalid_char))]
