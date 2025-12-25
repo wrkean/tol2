@@ -27,7 +27,6 @@ impl Lexer {
                 Err(e) => {
                     errors.push(CompilerError::Lexer {
                         message: e.to_string(),
-                        // FIXME: "some.tol is a placeholder, replace it."
                         src: NamedSource::new(source_file_name, source_code.to_string()),
                         span: e.span().into(),
                         help: e.help().map(|s| s.to_string()),
@@ -35,6 +34,11 @@ impl Lexer {
                 }
             }
         }
+        tokens.push(Token {
+            kind: TokenKind::Eof,
+            lexeme: "<EOF".to_string(),
+            span: 0..0,
+        });
 
         (
             LexedModule {

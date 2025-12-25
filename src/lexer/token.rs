@@ -89,6 +89,8 @@ pub enum TokenKind {
     Identifier,
     #[regex(r"//[^\n]*", logos::skip, allow_greedy = true)]
     Comment,
+
+    Eof,
 }
 
 #[cfg(test)]

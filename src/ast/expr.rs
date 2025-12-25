@@ -1,6 +1,7 @@
 use std::{fmt, ops::Range};
 
 use crate::{
+    ast::stmt::Stmt,
     lexer::token::{Token, TokenKind},
     visitor::expr_visitor::ExprVisitor,
 };
@@ -13,27 +14,50 @@ pub struct Expr {
 
 #[derive(Debug)]
 pub enum ExprKind {
-    Integer { lexeme: Token },
-    Float { lexeme: Token },
-    Boolean { lexeme: Token },
-    Add { left: Box<Expr>, right: Box<Expr> },
-    Sub { left: Box<Expr>, right: Box<Expr> },
-    Mult { left: Box<Expr>, right: Box<Expr> },
-    Div { left: Box<Expr>, right: Box<Expr> },
+    Integer {
+        lexeme: Token,
+    },
+    Float {
+        lexeme: Token,
+    },
+    Boolean {
+        lexeme: Token,
+    },
+    Add {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Sub {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Mult {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Div {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Block {
+        stmts: Vec<Stmt>,
+        value: Option<Box<Expr>>,
+    },
 }
 
 impl Expr {
-    pub fn new(kind: ExprKind) -> Self {
-        let span = match &kind {
-            ExprKind::Integer { lexeme } => lexeme.span.clone(),
-            ExprKind::Float { lexeme } => lexeme.span.clone(),
-            ExprKind::Boolean { lexeme } => lexeme.span.clone(),
-            ExprKind::Add { left, right }
-            | ExprKind::Sub { left, right }
-            | ExprKind::Mult { left, right }
-            | ExprKind::Div { left, right } => left.span.start..right.span.end,
-        };
-
+    pub fn new(kind: ExprKind, span: Range<usize>) -> Self {
+        // let span = match &kind {
+        //     ExprKind::Integer { lexeme } => lexeme.span.clone(),
+        //     ExprKind::Float { lexeme } => lexeme.span.clone(),
+        //     ExprKind::Boolean { lexeme } => lexeme.span.clone(),
+        //     ExprKind::Add { left, right }
+        //     | ExprKind::Sub { left, right }
+        //     | ExprKind::Mult { left, right }
+        //     | ExprKind::Div { left, right } => left.span.start..right.span.end,
+        //     ExprKind::FnBlock { stmts } => stmts[0].span.start..stmts[stmts.len() - 1].span.end,
+        // };
+        //
         Self { kind, span }
     }
 
@@ -46,6 +70,7 @@ impl Expr {
             ExprKind::Sub { .. } => visitor.visit_sub(self),
             ExprKind::Mult { .. } => visitor.visit_mult(self),
             ExprKind::Div { .. } => visitor.visit_div(self),
+            ExprKind::Block { .. } => visitor.visit_fnblock(self),
         }
     }
 }
@@ -61,6 +86,7 @@ impl fmt::Display for Expr {
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
             ExprKind::Div { left, right } => write!(f, "(/ {} {})", left, right),
+            ExprKind::Block { stmts, .. } => write!(f, "{{ {:?} }}", stmts),
         }
     }
 }

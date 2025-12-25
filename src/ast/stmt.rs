@@ -14,11 +14,16 @@ pub struct Stmt {
 pub enum StmtKind {
     Paraan {
         id: Token,
-        // return_type: TolType,
-        // params: Vec<ParamInfo>,
-        // block: Expr,
+        return_type: TolType,
+        params: Vec<ParamInfo>,
+        block: Expr,
     },
     Ang {
+        id: Token,
+        ttype: TolType,
+        rhs: Expr,
+    },
+    Dapat {
         id: Token,
         ttype: TolType,
         rhs: Expr,
@@ -39,11 +44,13 @@ impl Stmt {
             StmtKind::Paraan { .. } => visitor.visit_paraan(self),
             StmtKind::Ang { .. } => visitor.visit_ang(self),
             StmtKind::Ibalik { .. } => visitor.visit_ibalik(self),
+            StmtKind::Dapat { .. } => visitor.visit_dapat(self),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct ParamInfo {
-    id: String,
-    ttype: TolType,
+    pub id: String,
+    pub ttype: TolType,
 }
