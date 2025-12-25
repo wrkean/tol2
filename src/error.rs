@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use colored::Colorize;
 use miette::{Diagnostic, NamedSource, SourceSpan};
@@ -7,14 +7,13 @@ use thiserror::Error;
 use crate::lexer::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
-#[allow(unused)]
 pub enum CompilerError {
     #[error("{}: {}", "Mali sa lexer".bright_red(), message)]
     Lexer {
         message: String,
 
         #[source_code]
-        src: NamedSource<String>,
+        src: NamedSource<Arc<str>>,
 
         #[label("dito")]
         span: SourceSpan,
@@ -35,13 +34,22 @@ pub enum CompilerError {
         expected: String,
 
         #[source_code]
-        src: NamedSource<String>,
+        src: NamedSource<Arc<str>>,
 
-        #[label("Umasa ng `{}` ito ang naibigay", &expected)]
+        #[label("Umasa ng `{}`, ngunit ito ang naibigay", &expected)]
         span: SourceSpan,
 
         #[help]
         help: Option<String>,
+    },
+
+    #[error("{}", "Maling pagumpisa ng pahayag".bright_red())]
+    InvalidStartOfStatement {
+        #[source_code]
+        src: NamedSource<Arc<str>>,
+
+        #[label("Hindi ito pwede magumpisa ng pahayag")]
+        span: SourceSpan,
     },
 }
 

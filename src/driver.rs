@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, sync::Arc};
 
 use crate::{args::Args, compiler::Compiler, error::CompilerError};
 
@@ -8,6 +8,7 @@ pub fn compile(args: Args) -> Result<(), Vec<CompilerError>> {
         .map_err(CompilerError::from)
         .map_err(|e| vec![e])?;
 
+    let source_code: Arc<str> = Arc::from(source_code);
     let compiler = Compiler::new(args, source_code);
     compiler.run()?;
 

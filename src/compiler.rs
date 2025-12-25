@@ -1,18 +1,19 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use crate::{
     args::Args, error::CompilerError, lexer::Lexer, module::module_registry::ModuleRegistry,
+    parser::Parser,
 };
 
 pub struct Compiler<'com> {
     module_registry: ModuleRegistry<'com>,
-    source_code: String,
+    source_code: Arc<str>,
 
     config: Args,
 }
 
 impl<'com> Compiler<'com> {
-    pub fn new(args: Args, source_code: String) -> Self {
+    pub fn new(args: Args, source_code: Arc<str>) -> Self {
         Self {
             module_registry: ModuleRegistry::new(),
             source_code,
@@ -31,7 +32,17 @@ impl<'com> Compiler<'com> {
             .unwrap()
             .to_str()
             .unwrap();
-        let (lexed_mod, mut errors) = Lexer::lex(&self.source_code, source_file_name);
+        let (lexed_mod, mut errors) = Lexer::lex(Arc::clone(&self.source_code), source_file_name);
+
+        let parser = Parser::new(lexed_mod);
+        let parsed_mod = {
+            let (pmod, errs) = parser.parse();
+            errors.extend(errs);
+
+            println!("{:#?}", &pmod.ast);
+
+            pmod
+        };
 
         if errors.is_empty() {
             Ok(())

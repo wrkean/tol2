@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use miette::NamedSource;
 
 use crate::{
@@ -17,7 +19,7 @@ mod operator_db;
 pub struct Parser {
     tokens: Vec<Token>,
     src_filename: String,
-    source_code: String,
+    source_code: Arc<str>,
     current: usize,
 }
 
@@ -36,9 +38,15 @@ impl Parser {
         let mut ast = Vec::new();
 
         while !self.is_at_end() {
+            if self.peek().kind == TokenKind::Eof {
+                break;
+            }
             match self.parse_statement() {
                 Ok(s) => ast.push(s),
-                Err(e) => errors.push(*e),
+                Err(e) => {
+                    errors.push(*e);
+                    self.synchronize();
+                }
             }
         }
 
@@ -53,11 +61,16 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Result<Stmt, Box<CompilerError>> {
+        dbg!(&self.peek().kind);
+        dbg!(&self.peek().lexeme);
         match &self.peek().kind {
             TokenKind::Ang => self.parse_ang(),
             TokenKind::Dapat => self.parse_dapat(),
             TokenKind::Paraan => self.parse_paraan(),
-            _ => todo!(),
+            _ => Err(Box::new(CompilerError::InvalidStartOfStatement {
+                src: NamedSource::new(self.src_filename.clone(), Arc::clone(&self.source_code)),
+                span: self.peek().span.clone().into(),
+            })),
         }
     }
 
@@ -159,14 +172,17 @@ impl Parser {
         ))
     }
 
-    fn parse_type(&self) -> Result<TolType, Box<CompilerError>> {
-        let current_tok = self.peek();
+    fn parse_type(&mut self) -> Result<TolType, Box<CompilerError>> {
+        let current_tok = self.peek().to_owned();
 
         match &current_tok.kind {
-            TokenKind::Identifier => Ok(current_tok.lexeme.as_str().into()),
+            TokenKind::Identifier => {
+                self.advance();
+                Ok(current_tok.lexeme.as_str().into())
+            }
             _ => Err(Box::new(CompilerError::UnexpectedToken {
                 expected: "tipo".to_string(),
-                src: NamedSource::new(&self.src_filename, self.source_code.clone()),
+                src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                 span: current_tok.span.clone().into(),
                 help: None,
             })),
@@ -263,6 +279,21 @@ impl Parser {
         }
     }
 
+    fn synchronize(&mut self) {
+        if self.is_at_end() {
+            return;
+        }
+
+        self.advance();
+
+        while !self.is_at_end() {
+            match &self.peek().kind {
+                TokenKind::Paraan | TokenKind::Ang | TokenKind::Dapat | TokenKind::Eof => return,
+                _ => self.advance(),
+            };
+        }
+    }
+
     fn peek(&self) -> &Token {
         if !self.is_at_end() {
             &self.tokens[self.current]
@@ -290,7 +321,7 @@ impl Parser {
             if current_tok.kind != expected {
                 Err(Box::new(CompilerError::UnexpectedToken {
                     expected: expected_str.to_string(),
-                    src: NamedSource::new(&self.src_filename, self.source_code.clone()),
+                    src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                     span: current_tok.span.clone().into(),
                     help: None,
                 }))
@@ -314,7 +345,7 @@ mod test {
     use super::*;
 
     fn init_dummy_parser(input: &str) -> Parser {
-        let lexmod = Lexer::lex(input, "test.file").0;
+        let lexmod = Lexer::lex(Arc::from(input), "test.file").0;
 
         Parser::new(lexmod)
     }
