@@ -38,7 +38,7 @@ impl Parser {
         while !self.is_at_end() {
             match self.parse_statement() {
                 Ok(s) => ast.push(s),
-                Err(e) => errors.push(e),
+                Err(e) => errors.push(*e),
             }
         }
 
@@ -52,8 +52,8 @@ impl Parser {
         )
     }
 
-    fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
-        match &self.peek()?.kind {
+    fn parse_statement(&mut self) -> Result<Stmt, Box<CompilerError>> {
+        match &self.peek().kind {
             TokenKind::Ang => self.parse_ang(),
             TokenKind::Dapat => todo!(),
             TokenKind::Paraan => todo!(),
@@ -61,7 +61,7 @@ impl Parser {
         }
     }
 
-    fn parse_ang(&mut self) -> Result<Stmt, CompilerError> {
+    fn parse_ang(&mut self) -> Result<Stmt, Box<CompilerError>> {
         let ang_tok = self.consume(("ang", &TokenKind::Ang))?;
         let start = ang_tok.span.start;
         let id = self
@@ -76,54 +76,54 @@ impl Parser {
         Ok(Stmt::new(StmtKind::Ang { id, ttype, rhs }, start..end))
     }
 
-    fn parse_type(&self) -> Result<TolType, CompilerError> {
-        let current_tok = self.peek()?;
+    fn parse_type(&self) -> Result<TolType, Box<CompilerError>> {
+        let current_tok = self.peek();
 
         match &current_tok.kind {
             TokenKind::Identifier => Ok(current_tok.lexeme.as_str().into()),
-            _ => Err(CompilerError::UnexpectedToken {
+            _ => Err(Box::new(CompilerError::UnexpectedToken {
                 expected: "tipo".to_string(),
                 src: NamedSource::new(&self.src_filename, self.source_code.clone()),
                 span: current_tok.span.clone().into(),
                 help: None,
-            }),
+            })),
         }
     }
 
-    fn parse_expression(&mut self, prec: u8) -> Result<Expr, CompilerError> {
+    fn parse_expression(&mut self, prec: u8) -> Result<Expr, Box<CompilerError>> {
         let mut left = self.nud()?;
 
         while !self.is_at_end() {
-            let op = self.peek()?.clone();
+            let op = self.peek().clone();
             if TolOp::infix_bp(&op.kind) <= prec {
                 break;
             }
 
-            self.advance()?;
+            self.advance();
             left = self.led(&op, left)?;
         }
 
         Ok(left)
     }
 
-    fn nud(&mut self) -> Result<Expr, CompilerError> {
-        match &self.peek()?.kind {
+    fn nud(&mut self) -> Result<Expr, Box<CompilerError>> {
+        match &self.peek().kind {
             TokenKind::Integer => Ok(Expr::new(ExprKind::Integer {
-                lexeme: self.advance()?.clone(),
+                lexeme: self.advance().clone(),
             })),
             TokenKind::Float => Ok(Expr::new(ExprKind::Float {
-                lexeme: self.advance()?.clone(),
+                lexeme: self.advance().clone(),
             })),
             TokenKind::LParen => {
-                self.advance()?;
+                self.advance();
                 let expr = self.parse_expression(0)?;
                 self.consume((")", &TokenKind::RParen))?;
 
                 Ok(expr)
             }
             TokenKind::Minus => {
-                let op = self.advance()?.clone();
-                let rhs = self.parse_expression(TolOp::prefix_bp(&op.kind))?;
+                // let op = self.advance()?.clone();
+                // let rhs = self.parse_expression(TolOp::prefix_bp(&op.kind))?;
 
                 todo!()
                 // Expr::new(ExprKind::Negate { rhs })
@@ -132,7 +132,7 @@ impl Parser {
         }
     }
 
-    fn led(&mut self, op: &Token, left: Expr) -> Result<Expr, CompilerError> {
+    fn led(&mut self, op: &Token, left: Expr) -> Result<Expr, Box<CompilerError>> {
         let prec = TolOp::infix_bp(&op.kind);
         let assoc = TolOp::assoc(&op.kind);
 
@@ -150,7 +150,7 @@ impl Parser {
         left: Expr,
         prec: u8,
         assoc: Assoc,
-    ) -> Result<Expr, CompilerError> {
+    ) -> Result<Expr, Box<CompilerError>> {
         let left = Box::new(left);
         let right = Box::new(match assoc {
             Assoc::Left => self.parse_expression(prec)?,
@@ -165,38 +165,38 @@ impl Parser {
         }
     }
 
-    fn peek(&self) -> Result<&Token, CompilerError> {
+    fn peek(&self) -> &Token {
         if !self.is_at_end() {
-            Ok(&self.tokens[self.current])
+            &self.tokens[self.current]
         } else {
-            Err(CompilerError::UnexpectedEndOfInput)
+            panic!("Unexpected end of input")
         }
     }
 
-    fn advance(&mut self) -> Result<&Token, CompilerError> {
+    fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
-            Ok(&self.tokens[self.current - 1])
+            &self.tokens[self.current - 1]
         } else {
-            Err(CompilerError::UnexpectedEndOfInput)
+            panic!("Unexpected end of input")
         }
     }
 
-    fn consume(&mut self, expected: (&str, &TokenKind)) -> Result<&Token, CompilerError> {
-        let current_tok = self.peek()?;
+    fn consume(&mut self, expected: (&str, &TokenKind)) -> Result<&Token, Box<CompilerError>> {
+        let current_tok = self.peek();
         if !self.is_at_end() {
             if &current_tok.kind != expected.1 {
-                Err(CompilerError::UnexpectedToken {
+                Err(Box::new(CompilerError::UnexpectedToken {
                     expected: expected.0.to_string(),
                     src: NamedSource::new(&self.src_filename, self.source_code.clone()),
                     span: current_tok.span.clone().into(),
                     help: None,
-                })
+                }))
             } else {
-                self.advance()
+                Ok(self.advance())
             }
         } else {
-            Err(CompilerError::UnexpectedEndOfInput)
+            panic!("Unexpected end of input")
         }
     }
 

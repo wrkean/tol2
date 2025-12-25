@@ -31,6 +31,8 @@ pub enum TokenKind {
     Tama,
     #[token("mali")]
     Mali,
+    #[token("ibalik")]
+    Ibalik,
 
     // Operators
     #[token("+")]

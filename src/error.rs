@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::lexer::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
+#[allow(unused)]
 pub enum CompilerError {
     #[error("{}: {}", "Mali sa lexer".bright_red(), message)]
     Lexer {
