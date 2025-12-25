@@ -158,9 +158,9 @@ impl Parser {
         });
         match &op.kind {
             TokenKind::Plus => Ok(Expr::new(ExprKind::Add { left, right })),
-            TokenKind::Minus => Ok(Expr::new(ExprKind::Add { left, right })),
-            TokenKind::Star => Ok(Expr::new(ExprKind::Add { left, right })),
-            TokenKind::Slash => Ok(Expr::new(ExprKind::Add { left, right })),
+            TokenKind::Minus => Ok(Expr::new(ExprKind::Sub { left, right })),
+            TokenKind::Star => Ok(Expr::new(ExprKind::Mult { left, right })),
+            TokenKind::Slash => Ok(Expr::new(ExprKind::Div { left, right })),
             _ => unreachable!(),
         }
     }
@@ -240,5 +240,14 @@ mod test {
         } else {
             panic!("Expected add expr")
         }
+    }
+
+    #[test]
+    fn parses_expression() {
+        let mut parser = init_dummy_parser("78 + (10 - 43) / 12 * 2");
+        assert_eq!(
+            "(+ 78 (* (/ (- 10 43) 12) 2))",
+            parser.parse_expression(0).unwrap().to_string()
+        );
     }
 }

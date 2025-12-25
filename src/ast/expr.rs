@@ -57,10 +57,10 @@ impl fmt::Display for Expr {
             ExprKind::Integer { lexeme }
             | ExprKind::Float { lexeme }
             | ExprKind::Boolean { lexeme } => write!(f, "{}", &lexeme.lexeme),
-            ExprKind::Add { left, right }
-            | ExprKind::Sub { left, right }
-            | ExprKind::Mult { left, right }
-            | ExprKind::Div { left, right } => write!(f, "(+ {} {})", left, right),
+            ExprKind::Add { left, right } => write!(f, "(+ {} {})", left, right),
+            ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
+            ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
+            ExprKind::Div { left, right } => write!(f, "(/ {} {})", left, right),
         }
     }
 }
