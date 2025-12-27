@@ -12,9 +12,6 @@ pub enum CompilerError {
     Lexer {
         message: String,
 
-        #[source_code]
-        src: NamedSource<Arc<str>>,
-
         #[label("dito")]
         span: SourceSpan,
 
@@ -33,9 +30,6 @@ pub enum CompilerError {
     UnexpectedToken {
         expected: String,
 
-        #[source_code]
-        src: NamedSource<Arc<str>>,
-
         #[label("{expected}")]
         span: SourceSpan,
 
@@ -45,9 +39,6 @@ pub enum CompilerError {
 
     #[error("{}", "Hindi inaasahang tipo".bright_red())]
     UnexpectedType {
-        #[source_code]
-        src: NamedSource<Arc<str>>,
-
         #[label("Hindi ito tipo")]
         span: SourceSpan,
 
@@ -57,9 +48,6 @@ pub enum CompilerError {
 
     #[error("{}", "Maling pagumpisa ng pahayag".bright_red())]
     InvalidStartOfStatement {
-        #[source_code]
-        src: NamedSource<Arc<str>>,
-
         #[label("Hindi ito pwede magumpisa ng pahayag")]
         span: SourceSpan,
     },

@@ -7,22 +7,19 @@ use crate::{
 
 pub struct Compiler<'com> {
     module_registry: ModuleRegistry<'com>,
-    source_code: Arc<str>,
-
     config: Args,
 }
 
 impl<'com> Compiler<'com> {
-    pub fn new(args: Args, source_code: Arc<str>) -> Self {
+    pub fn new(args: Args) -> Self {
         Self {
             module_registry: ModuleRegistry::new(),
-            source_code,
 
             config: args,
         }
     }
 
-    pub fn run(&self) -> Result<(), Vec<CompilerError>> {
+    pub fn run(&self, source_code: &str) -> Result<(), Vec<CompilerError>> {
         // This here is guaranteed to be a filename as it is checked by the driver beforehand
         // WARN: Have better handling for this
         let source_file_name = self
@@ -32,12 +29,13 @@ impl<'com> Compiler<'com> {
             .unwrap()
             .to_str()
             .unwrap();
-        let (lexed_mod, mut errors) = Lexer::lex(Arc::clone(&self.source_code), source_file_name);
+
+        let (lexed_mod, mut errors) = Lexer::lex(source_code, source_file_name);
 
         let parser = Parser::new(lexed_mod);
         let parsed_mod = {
-            let (pmod, errs) = parser.parse();
-            errors.extend(errs);
+            let (pmod, pars_errs) = parser.parse();
+            errors.extend(pars_errs);
 
             println!("{:#?}", &pmod.ast);
 

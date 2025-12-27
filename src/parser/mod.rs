@@ -82,7 +82,6 @@ macro_rules! consume_block_rbrace {
 pub struct Parser {
     tokens: Vec<Token>,
     src_filename: String,
-    source_code: Arc<str>,
     current: usize,
 }
 
@@ -91,7 +90,6 @@ impl Parser {
         Self {
             tokens: lexed_module.tokens,
             src_filename: lexed_module.src_filename,
-            source_code: lexed_module.source_code,
             current: 0,
         }
     }
@@ -117,7 +115,6 @@ impl Parser {
             ParsedModule {
                 ast,
                 src_filename: self.src_filename,
-                source_code: self.source_code,
             },
             errors,
         )
@@ -131,7 +128,6 @@ impl Parser {
             TokenKind::Dapat => self.parse_dapat(),
             TokenKind::Paraan => self.parse_paraan(),
             _ => Err(Box::new(CompilerError::InvalidStartOfStatement {
-                src: NamedSource::new(self.src_filename.clone(), Arc::clone(&self.source_code)),
                 span: self.peek().span.clone().into(),
             })),
         }
@@ -247,7 +243,6 @@ impl Parser {
                 Ok(current_tok.lexeme.as_str().into())
             }
             _ => Err(Box::new(CompilerError::UnexpectedType {
-                src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                 span: current_tok.span.clone().into(),
                 help: None,
             })),
@@ -387,7 +382,6 @@ impl Parser {
             if current_tok.kind != expected {
                 Err(Box::new(CompilerError::UnexpectedToken {
                     expected: err_msg.to_string(),
-                    src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                     span: current_tok.span.clone().into(),
                     help: help.map(|s| s.to_string()),
                 }))
@@ -411,7 +405,7 @@ mod test {
     use super::*;
 
     fn init_dummy_parser(input: &str) -> Parser {
-        let lexmod = Lexer::lex(Arc::from(input), "test.file").0;
+        let lexmod = Lexer::lex(input, "test.tol").0;
 
         Parser::new(lexmod)
     }
