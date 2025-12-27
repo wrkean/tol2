@@ -1,10 +1,6 @@
 use std::{fmt, ops::Range};
 
-use crate::{
-    ast::stmt::Stmt,
-    lexer::token::{Token, TokenKind},
-    visitor::expr_visitor::ExprVisitor,
-};
+use crate::{ast::stmt::Stmt, lexer::token::Token};
 
 #[derive(Debug)]
 pub struct Expr {
@@ -59,19 +55,6 @@ impl Expr {
         // };
         //
         Self { kind, span }
-    }
-
-    pub fn accept<V: ExprVisitor>(&self, visitor: &mut V) {
-        match &self.kind {
-            ExprKind::Integer { .. } => visitor.visit_integer(self),
-            ExprKind::Float { .. } => visitor.visit_float(self),
-            ExprKind::Boolean { .. } => visitor.visit_boolean(self),
-            ExprKind::Add { .. } => visitor.visit_add(self),
-            ExprKind::Sub { .. } => visitor.visit_sub(self),
-            ExprKind::Mult { .. } => visitor.visit_mult(self),
-            ExprKind::Div { .. } => visitor.visit_div(self),
-            ExprKind::Block { .. } => visitor.visit_fnblock(self),
-        }
     }
 }
 

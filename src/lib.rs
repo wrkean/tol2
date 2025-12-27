@@ -8,7 +8,6 @@ pub mod compiler;
 pub mod driver;
 pub mod error;
 pub mod module;
-pub mod visitor;
 
 mod lexer;
 mod parser;

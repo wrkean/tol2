@@ -1,8 +1,6 @@
 use std::ops::Range;
 
-use crate::{
-    ast::expr::Expr, lexer::token::Token, toltype::TolType, visitor::stmt_visitor::StmtVisitor,
-};
+use crate::{ast::expr::Expr, lexer::token::Token, toltype::TolType};
 
 #[derive(Debug)]
 pub struct Stmt {
@@ -37,15 +35,6 @@ pub enum StmtKind {
 impl Stmt {
     pub fn new(kind: StmtKind, span: Range<usize>) -> Self {
         Self { kind, span }
-    }
-
-    pub fn accept<V: StmtVisitor>(&self, visitor: &mut V) {
-        match &self.kind {
-            StmtKind::Paraan { .. } => visitor.visit_paraan(self),
-            StmtKind::Ang { .. } => visitor.visit_ang(self),
-            StmtKind::Ibalik { .. } => visitor.visit_ibalik(self),
-            StmtKind::Dapat { .. } => visitor.visit_dapat(self),
-        }
     }
 }
 
