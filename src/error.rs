@@ -36,7 +36,19 @@ pub enum CompilerError {
         #[source_code]
         src: NamedSource<Arc<str>>,
 
-        #[label("Umasa ng `{}`, ngunit ito ang naibigay", &expected)]
+        #[label("{expected}")]
+        span: SourceSpan,
+
+        #[help]
+        help: Option<String>,
+    },
+
+    #[error("{}", "Hindi inaasahang tipo".bright_red())]
+    UnexpectedType {
+        #[source_code]
+        src: NamedSource<Arc<str>>,
+
+        #[label("Hindi ito tipo")]
         span: SourceSpan,
 
         #[help]

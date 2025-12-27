@@ -16,6 +16,69 @@ use crate::{
 
 mod operator_db;
 
+macro_rules! consume_id {
+    ($parser:expr, $after:literal) => {
+        $parser.consume(
+            TokenKind::Identifier,
+            concat!("Umasa ng pangalan pagkatapos ng `", $after, "`"),
+            None,
+        )
+    };
+    ($parser:expr) => {
+        $parser.consume(TokenKind::Identifier, "Umasa ng pangalan", None)
+    };
+}
+
+macro_rules! consume_colon {
+    ($parser:expr) => {
+        $parser.consume(
+            TokenKind::Colon,
+            "Umasa ng `:`",
+            Some("Ihiwalay ang pangalan sa tipo gamit ang `:`"),
+        )
+    };
+}
+
+macro_rules! consume_equal {
+    ($parser:expr) => {
+        $parser.consume(
+            TokenKind::Equal,
+            "Umasa ng `=`",
+            Some("Ang `=` lamang ang maaari ilagay dito"),
+        )
+    };
+}
+
+macro_rules! consume_semicol {
+    ($parser:expr) => {
+        $parser.consume(
+            TokenKind::Semicolon,
+            "Umasa ng `;`, subukang lagyan ng `;` dito",
+            None,
+        )
+    };
+}
+
+macro_rules! consume_param_rparen {
+    ($parser:expr) => {
+        $parser.consume(
+            TokenKind::RParen,
+            "Hindi naisara ang mga parametro, lagyan ng `)` dito",
+            None,
+        )
+    };
+}
+
+macro_rules! consume_block_rbrace {
+    ($parser:expr) => {
+        $parser.consume(
+            TokenKind::RBrace,
+            "Hindi naisara ang bloke gamit ang `}`",
+            None,
+        )
+    };
+}
+
 pub struct Parser {
     tokens: Vec<Token>,
     src_filename: String,
@@ -75,32 +138,32 @@ impl Parser {
     }
 
     fn parse_ang(&mut self) -> Result<Stmt, Box<CompilerError>> {
-        let start = self.consume("ang", TokenKind::Ang)?.span.start;
-        let id = self.consume("<variable>", TokenKind::Identifier)?.clone();
-        self.consume(":", TokenKind::Colon)?;
+        let start = self.advance().span.start;
+        let id = consume_id!(self, "`ang`")?.clone();
+        consume_colon!(self)?;
         let ttype = self.parse_type()?;
-        self.consume("=", TokenKind::Equal)?;
+        consume_equal!(self)?;
         let rhs = self.parse_expression(0)?;
-        let end = self.consume(";", TokenKind::Semicolon)?.span.end;
+        let end = consume_semicol!(self)?.span.end;
 
         Ok(Stmt::new(StmtKind::Ang { id, ttype, rhs }, start..end))
     }
 
     fn parse_dapat(&mut self) -> Result<Stmt, Box<CompilerError>> {
-        let start = self.consume("dapat", TokenKind::Dapat)?.span.start;
-        let id = self.consume("<variable>", TokenKind::Identifier)?.clone();
-        self.consume(":", TokenKind::Colon)?;
+        let start = self.advance().span.start;
+        let id = consume_id!(self, "dapat")?.clone();
+        consume_colon!(self)?;
         let ttype = self.parse_type()?;
-        self.consume("=", TokenKind::Equal)?;
+        consume_equal!(self)?;
         let rhs = self.parse_expression(0)?;
-        let end = self.consume(";", TokenKind::Semicolon)?.span.end;
+        let end = consume_semicol!(self)?.span.end;
 
         Ok(Stmt::new(StmtKind::Dapat { id, ttype, rhs }, start..end))
     }
 
     fn parse_paraan(&mut self) -> Result<Stmt, Box<CompilerError>> {
-        let start = self.consume("paraan", TokenKind::Paraan)?.span.start;
-        let id = self.consume("<variable>", TokenKind::Identifier)?.clone();
+        let start = self.advance().span.start;
+        let id = consume_id!(self, "paraan")?.clone();
         let params = self.parse_params()?;
         let return_type = if self.peek().kind == TokenKind::LBrace {
             TolType::Void
@@ -123,9 +186,9 @@ impl Parser {
 
     fn parse_params(&mut self) -> Result<Vec<ParamInfo>, Box<CompilerError>> {
         let mut params = Vec::new();
-        self.consume("(", TokenKind::LParen)?;
-        let id = self.consume("<variable>", TokenKind::Identifier)?.clone();
-        self.consume(":", TokenKind::Colon)?;
+        self.consume(TokenKind::LParen, "Umasa ng `(`", None)?;
+        let id = consume_id!(self)?.clone();
+        consume_colon!(self)?;
         let ttype = self.parse_type()?;
         params.push(ParamInfo {
             id: id.lexeme,
@@ -140,8 +203,8 @@ impl Parser {
                 break;
             }
 
-            let id = self.consume("<variable>", TokenKind::Identifier)?.clone();
-            self.consume(":", TokenKind::Colon)?;
+            let id = consume_id!(self)?.clone();
+            consume_colon!(self)?;
             let ttype = self.parse_type()?;
             params.push(ParamInfo {
                 id: id.lexeme,
@@ -149,20 +212,23 @@ impl Parser {
             });
         }
 
-        self.consume(")", TokenKind::RParen)?;
+        consume_param_rparen!(self)?;
 
         Ok(params)
     }
 
     fn parse_block(&mut self) -> Result<Expr, Box<CompilerError>> {
-        let start = self.consume("{", TokenKind::LBrace)?.span.start;
+        let start = self
+            .consume(TokenKind::LBrace, "Umasa ng `{`", None)?
+            .span
+            .start;
 
         let mut stmts = Vec::new();
         while !self.is_at_end() && self.peek().kind != TokenKind::RBrace {
             stmts.push(self.parse_statement()?);
         }
 
-        let end = self.consume("}", TokenKind::RBrace)?.span.end;
+        let end = consume_block_rbrace!(self)?.span.end;
 
         // TODO: Value is None for now until after the parsing of the last block exprssion is
         // implmeented
@@ -180,8 +246,7 @@ impl Parser {
                 self.advance();
                 Ok(current_tok.lexeme.as_str().into())
             }
-            _ => Err(Box::new(CompilerError::UnexpectedToken {
-                expected: "tipo".to_string(),
+            _ => Err(Box::new(CompilerError::UnexpectedType {
                 src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                 span: current_tok.span.clone().into(),
                 help: None,
@@ -229,7 +294,7 @@ impl Parser {
             TokenKind::LParen => {
                 self.advance();
                 let expr = self.parse_expression(0)?;
-                self.consume(")", TokenKind::RParen)?;
+                self.consume(TokenKind::RParen, "Umasa ng `)`", None)?;
 
                 Ok(expr)
             }
@@ -313,17 +378,18 @@ impl Parser {
 
     fn consume(
         &mut self,
-        expected_str: &str,
         expected: TokenKind,
+        err_msg: &str,
+        help: Option<&str>,
     ) -> Result<&Token, Box<CompilerError>> {
         let current_tok = self.peek();
         if !self.is_at_end() {
             if current_tok.kind != expected {
                 Err(Box::new(CompilerError::UnexpectedToken {
-                    expected: expected_str.to_string(),
+                    expected: err_msg.to_string(),
                     src: NamedSource::new(&self.src_filename, Arc::clone(&self.source_code)),
                     span: current_tok.span.clone().into(),
-                    help: None,
+                    help: help.map(|s| s.to_string()),
                 }))
             } else {
                 Ok(self.advance())
