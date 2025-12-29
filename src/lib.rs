@@ -10,5 +10,4 @@ pub mod error;
 pub mod module;
 
 mod lexer;
-mod parser;
 pub mod toltype;

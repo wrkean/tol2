@@ -1,9 +1,11 @@
 use clap::Parser;
-use tol2::{args::Args, driver::compile};
+use tol2::driver::{CompilerOptions, compile};
 
 fn main() {
-    let args = Args::parse();
-    if let Err(ewos) = compile(args) {
+    let opts = CompilerOptions::parse();
+    let compilation_result = compile(opts);
+
+    if let Err(ewos) = compilation_result {
         for e in ewos.errors {
             match ewos.source_code.as_ref() {
                 Some(src) => {
