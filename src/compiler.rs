@@ -1,6 +1,6 @@
 use crate::{
     driver::CompilerOptions, error::CompilerError, lexer::Lexer,
-    module::module_registry::ModuleRegistry,
+    module::module_registry::ModuleRegistry, parser::Parser,
 };
 use std::path::Path;
 
@@ -29,6 +29,9 @@ impl<'com> Compiler<'com> {
             .unwrap();
 
         let (lexed_mod, errors) = Lexer::lex(source_code, source_file_name);
+
+        let mut parser = Parser::new(lexed_mod);
+        println!("{:#?}", parser.parse_statement());
 
         if errors.is_empty() {
             Ok(())

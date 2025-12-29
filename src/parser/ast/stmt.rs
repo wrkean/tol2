@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::{ast::expr::Expr, lexer::token::Token, toltype::TolType};
+use crate::{lexer::token::Token, parser::ast::expr::Expr, toltype::TolType};
 
 #[derive(Debug)]
 pub struct Stmt {

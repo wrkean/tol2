@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::{
-    ast::{Ast, stmt::Stmt},
     error::CompilerError,
+    parser::ast::{Ast, stmt::Stmt},
 };
 
 pub struct ParsedModule {

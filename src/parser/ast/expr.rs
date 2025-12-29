@@ -1,6 +1,6 @@
 use std::{fmt, ops::Range};
 
-use crate::{ast::stmt::Stmt, lexer::token::Token};
+use crate::{lexer::token::Token, parser::ast::stmt::Stmt};
 
 #[derive(Debug)]
 pub struct Expr {
@@ -11,13 +11,13 @@ pub struct Expr {
 #[derive(Debug)]
 pub enum ExprKind {
     Integer {
-        lexeme: Token,
+        lexeme: String,
     },
     Float {
-        lexeme: Token,
+        lexeme: String,
     },
     Boolean {
-        lexeme: Token,
+        lexeme: String,
     },
     Add {
         left: Box<Expr>,
@@ -42,18 +42,8 @@ pub enum ExprKind {
 }
 
 impl Expr {
+    #[deprecated]
     pub fn new(kind: ExprKind, span: Range<usize>) -> Self {
-        // let span = match &kind {
-        //     ExprKind::Integer { lexeme } => lexeme.span.clone(),
-        //     ExprKind::Float { lexeme } => lexeme.span.clone(),
-        //     ExprKind::Boolean { lexeme } => lexeme.span.clone(),
-        //     ExprKind::Add { left, right }
-        //     | ExprKind::Sub { left, right }
-        //     | ExprKind::Mult { left, right }
-        //     | ExprKind::Div { left, right } => left.span.start..right.span.end,
-        //     ExprKind::FnBlock { stmts } => stmts[0].span.start..stmts[stmts.len() - 1].span.end,
-        // };
-        //
         Self { kind, span }
     }
 }
@@ -64,7 +54,7 @@ impl fmt::Display for Expr {
         match &self.kind {
             ExprKind::Integer { lexeme }
             | ExprKind::Float { lexeme }
-            | ExprKind::Boolean { lexeme } => write!(f, "{}", &lexeme.lexeme),
+            | ExprKind::Boolean { lexeme } => write!(f, "{}", lexeme),
             ExprKind::Add { left, right } => write!(f, "(+ {} {})", left, right),
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),

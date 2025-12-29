@@ -11,6 +11,20 @@ pub struct Token {
     pub span: Range<usize>,
 }
 
+impl Token {
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
+
+    pub fn lexeme(&self) -> &str {
+        &self.lexeme
+    }
+
+    pub fn span(&self) -> Range<usize> {
+        self.span.clone()
+    }
+}
+
 #[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip(r"[ \t\f\r\n]+"))]
 #[logos(utf8 = true)]

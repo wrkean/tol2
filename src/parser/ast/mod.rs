@@ -1,4 +1,4 @@
-use crate::ast::stmt::Stmt;
+use crate::parser::ast::stmt::Stmt;
 
 pub type Ast = Vec<Stmt>;
 
