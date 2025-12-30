@@ -8,6 +8,15 @@ pub struct Stmt {
     pub span: Range<usize>,
 }
 
+impl Stmt {
+    pub fn new_dummy() -> Self {
+        Self {
+            kind: StmtKind::Dummy,
+            span: 0..0,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum StmtKind {
     Paraan {
@@ -30,12 +39,9 @@ pub enum StmtKind {
         id: Token,
         // rhs: Expr,
     },
-}
 
-impl Stmt {
-    pub fn new(kind: StmtKind, span: Range<usize>) -> Self {
-        Self { kind, span }
-    }
+    // Special
+    Dummy,
 }
 
 #[derive(Debug)]

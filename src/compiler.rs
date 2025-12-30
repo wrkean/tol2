@@ -28,10 +28,15 @@ impl<'com> Compiler<'com> {
             .to_str()
             .unwrap();
 
-        let (lexed_mod, errors) = Lexer::lex(source_code, source_file_name);
+        let (lexed_mod, mut errors) = Lexer::lex(source_code, source_file_name);
 
         let mut parser = Parser::new(lexed_mod);
-        println!("{:#?}", parser.parse_statement());
+        let mut parsed_mod = {
+            let (pmod, perrs) = parser.parse();
+            errors.extend(perrs);
+            pmod
+        };
+        println!("{:#?}", &parsed_mod.ast);
 
         if errors.is_empty() {
             Ok(())

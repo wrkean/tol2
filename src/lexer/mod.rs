@@ -39,7 +39,12 @@ impl Lexer {
         tokens.push(Token {
             kind: TokenKind::Eof,
             lexeme: "<EOF>".to_string(),
-            span: 0..0,
+            span: if tokens.is_empty() {
+                0..0
+            } else {
+                let last_span = tokens.last().unwrap().span.end;
+                last_span..last_span + 1
+            },
         });
 
         (

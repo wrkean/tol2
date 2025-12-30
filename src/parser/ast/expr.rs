@@ -1,6 +1,6 @@
 use std::{fmt, ops::Range};
 
-use crate::{lexer::token::Token, parser::ast::stmt::Stmt};
+use crate::parser::ast::stmt::Stmt;
 
 #[derive(Debug)]
 pub struct Expr {
@@ -39,12 +39,22 @@ pub enum ExprKind {
         stmts: Vec<Stmt>,
         value: Option<Box<Expr>>,
     },
+
+    // Special
+    Dummy,
 }
 
 impl Expr {
     #[deprecated]
     pub fn new(kind: ExprKind, span: Range<usize>) -> Self {
         Self { kind, span }
+    }
+
+    pub fn new_dummy() -> Self {
+        Self {
+            kind: ExprKind::Dummy,
+            span: 0..0,
+        }
     }
 }
 
@@ -60,6 +70,7 @@ impl fmt::Display for Expr {
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
             ExprKind::Div { left, right } => write!(f, "(/ {} {})", left, right),
             ExprKind::Block { stmts, .. } => write!(f, "{{ {:?} }}", stmts),
+            ExprKind::Dummy => write!(f, "<dummy>"),
         }
     }
 }

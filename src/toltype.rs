@@ -19,6 +19,9 @@ pub enum TolType {
     Char,
     Bool,
 
+    // Composites
+    UnknownIdentifier(String),
+
     // Special
     Void,
 }

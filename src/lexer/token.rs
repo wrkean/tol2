@@ -12,6 +12,16 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn new_dummy() -> Self {
+        Self {
+            kind: TokenKind::Dummy,
+            lexeme: "".to_string(),
+            span: 0..0,
+        }
+    }
+}
+
+impl Token {
     pub fn kind(&self) -> &TokenKind {
         &self.kind
     }
@@ -105,6 +115,24 @@ pub enum TokenKind {
     Comment,
 
     Eof,
+    Dummy,
+}
+
+impl TokenKind {
+    pub fn starts_a_statement(&self) -> bool {
+        matches!(self, TokenKind::Ang)
+    }
+
+    pub fn starts_an_expression(&self) -> bool {
+        matches!(
+            self,
+            TokenKind::Integer | TokenKind::Float | TokenKind::Identifier
+        )
+    }
+
+    pub fn starts_a_type(&self) -> bool {
+        matches!(self, TokenKind::Identifier)
+    }
 }
 
 #[cfg(test)]
