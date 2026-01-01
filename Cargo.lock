@@ -616,6 +616,7 @@ name = "tol2"
 version = "0.1.0"
 dependencies = [
  "assert_cmd",
+ "bitflags",
  "clap",
  "colored",
  "logos",

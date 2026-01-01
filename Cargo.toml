@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 assert_cmd = "2.1.1"
+bitflags = "2.10.0"
 clap = { version = "4.5.53", features = ["derive"] }
 colored = "3.0.0"
 logos = "0.16.0"
