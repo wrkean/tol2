@@ -28,10 +28,18 @@ impl TolOp {
 use Associativity::*;
 pub fn get_infix_op(kind: &TokenKind) -> TolOp {
     match kind {
-        TokenKind::Plus => TolOp::new(Left, 1),
-        TokenKind::Minus => TolOp::new(Left, 1),
-        TokenKind::Star => TolOp::new(Left, 2),
-        TokenKind::Slash => TolOp::new(Left, 2),
+        TokenKind::PipePipe => TolOp::new(Left, 1),
+        TokenKind::AmperAmper => TolOp::new(Left, 2),
+        TokenKind::BangEqual => TolOp::new(Left, 3),
+        TokenKind::EqualEqual => TolOp::new(Left, 3),
+        TokenKind::LessEqual => TolOp::new(Left, 4),
+        TokenKind::GreaterEqual => TolOp::new(Left, 4),
+        TokenKind::Less => TolOp::new(Left, 4),
+        TokenKind::Greater => TolOp::new(Left, 4),
+        TokenKind::Plus => TolOp::new(Left, 5),
+        TokenKind::Minus => TolOp::new(Left, 5),
+        TokenKind::Star => TolOp::new(Left, 6),
+        TokenKind::Slash => TolOp::new(Left, 6),
         _ => TolOp::new(Left, 0),
     }
 }

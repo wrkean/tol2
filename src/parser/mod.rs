@@ -467,38 +467,35 @@ impl Parser {
     }
 
     fn led(&mut self, op: &Token, left: Expr) -> Result<Expr, CompilerError> {
-        let precedence = match operators::get_infix_op(op.kind()).assoc() {
-            Associativity::Left => operators::get_infix_op(op.kind()).precedence(),
-            Associativity::Right => operators::get_infix_op(op.kind()).precedence() + 1,
+        let infix = operators::get_infix_op(op.kind());
+        let precedence = match infix.assoc() {
+            Associativity::Left => infix.precedence(),
+            Associativity::Right => infix.precedence() + 1,
         };
 
-        match op.kind() {
-            k @ (TokenKind::Plus | TokenKind::Minus | TokenKind::Star | TokenKind::Slash) => {
+        let make_expr =
+            |constructor: fn(Box<Expr>, Box<Expr>) -> ExprKind| -> Result<Expr, CompilerError> {
                 let right = self.parse_expression(precedence)?;
                 let span = left.span.start..right.span.end;
                 Ok(Expr {
-                    kind: match k {
-                        TokenKind::Plus => ExprKind::Add {
-                            left: Box::new(left),
-                            right: Box::new(right),
-                        },
-                        TokenKind::Minus => ExprKind::Sub {
-                            left: Box::new(left),
-                            right: Box::new(right),
-                        },
-                        TokenKind::Star => ExprKind::Mult {
-                            left: Box::new(left),
-                            right: Box::new(right),
-                        },
-                        TokenKind::Slash => ExprKind::Div {
-                            left: Box::new(left),
-                            right: Box::new(right),
-                        },
-                        _ => unreachable!(),
-                    },
+                    kind: constructor(Box::new(left), Box::new(right)),
                     span,
                 })
+            };
+
+        match op.kind() {
+            TokenKind::Plus => make_expr(|l, r| ExprKind::Add { left: l, right: r }),
+            TokenKind::Minus => make_expr(|l, r| ExprKind::Sub { left: l, right: r }),
+            TokenKind::Star => make_expr(|l, r| ExprKind::Mult { left: l, right: r }),
+            TokenKind::Slash => make_expr(|l, r| ExprKind::Div { left: l, right: r }),
+            TokenKind::EqualEqual => make_expr(|l, r| ExprKind::Equality { left: l, right: r }),
+            TokenKind::BangEqual => make_expr(|l, r| ExprKind::InEquality { left: l, right: r }),
+            TokenKind::Greater => make_expr(|l, r| ExprKind::Greater { left: l, right: r }),
+            TokenKind::Less => make_expr(|l, r| ExprKind::Less { left: l, right: r }),
+            TokenKind::GreaterEqual => {
+                make_expr(|l, r| ExprKind::GreaterEqual { left: l, right: r })
             }
+            TokenKind::LessEqual => make_expr(|l, r| ExprKind::LessEqual { left: l, right: r }),
             _ => todo!(),
         }
     }

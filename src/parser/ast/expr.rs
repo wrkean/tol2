@@ -17,6 +17,12 @@ pub enum ExprKind {
     Sub { left: Box<Expr>, right: Box<Expr> },
     Mult { left: Box<Expr>, right: Box<Expr> },
     Div { left: Box<Expr>, right: Box<Expr> },
+    Equality { left: Box<Expr>, right: Box<Expr> },
+    InEquality { left: Box<Expr>, right: Box<Expr> },
+    Greater { left: Box<Expr>, right: Box<Expr> },
+    Less { left: Box<Expr>, right: Box<Expr> },
+    GreaterEqual { left: Box<Expr>, right: Box<Expr> },
+    LessEqual { left: Box<Expr>, right: Box<Expr> },
 
     // Special
     Dummy,
@@ -47,6 +53,12 @@ impl fmt::Display for Expr {
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
             ExprKind::Div { left, right } => write!(f, "(/ {} {})", left, right),
+            ExprKind::Equality { left, right } => write!(f, "(== {} {})", left, right),
+            ExprKind::InEquality { left, right } => write!(f, "(!= {} {})", left, right),
+            ExprKind::Greater { left, right } => write!(f, "(!= {} {})", left, right),
+            ExprKind::Less { left, right } => write!(f, "(!= {} {})", left, right),
+            ExprKind::GreaterEqual { left, right } => write!(f, "(!= {} {})", left, right),
+            ExprKind::LessEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::Dummy => write!(f, "<dummy>"),
         }
     }

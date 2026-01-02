@@ -69,6 +69,14 @@ pub enum TokenKind {
     Slash,
     #[token("=")]
     Equal,
+    #[token("|")]
+    Pipe,
+    #[token("||")]
+    PipePipe,
+    #[token("&")]
+    Amper,
+    #[token("&&")]
+    AmperAmper,
     #[token("==")]
     EqualEqual,
     #[token("!=")]
