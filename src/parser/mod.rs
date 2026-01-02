@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use clap::builder::TryMapValueParser;
 
 use crate::{
     error::CompilerError,
@@ -7,7 +8,7 @@ use crate::{
     parser::{
         ast::{
             expr::{Expr, ExprKind},
-            stmt::{Stmt, StmtKind},
+            stmt::{ParamInfo, Stmt, StmtKind},
         },
         operators::Associativity,
     },
@@ -57,14 +58,36 @@ impl Parser {
     }
 
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
+        dbg!(self.peek().kind());
         match self.peek().kind() {
             TokenKind::Ang => Ok(self.parse_ang()),
+            TokenKind::Paraan => Ok(self.parse_paraan()),
+            TokenKind::Semicolon => {
+                self.advance();
+                Ok(Stmt::new_null())
+            }
+            TokenKind::LBrace => {
+                self.advance();
+                let block = self.parse_block();
+                let Some(_) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
+                else {
+                    return Ok(Stmt::new_dummy());
+                };
+
+                Ok(block)
+            }
             _ => todo!(),
         }
     }
 
     fn parse_ang(&mut self) -> Stmt {
-        let start = self.advance().span.start;
+        let start = if let Some(ang) =
+            self.consume_and_synchronize(TokenKind::Ang, "`ang`", SyncSet::STMT | SyncSet::RBRACE)
+        {
+            ang.span.start
+        } else {
+            return Stmt::new_dummy();
+        };
 
         let Some(id) = self.consume_and_synchronize(
             TokenKind::Identifier,
@@ -111,6 +134,122 @@ impl Parser {
 
         Stmt {
             kind: StmtKind::Ang { id, ttype, rhs },
+            span: start..self.previous().span.end,
+        }
+    }
+
+    fn parse_paraan(&mut self) -> Stmt {
+        let start = if let Some(paraan) =
+            self.consume_and_synchronize(TokenKind::Paraan, "`paraan`", SyncSet::LBRACE)
+        {
+            paraan.span.start
+        } else {
+            return Stmt::new_dummy();
+        };
+
+        let Some(id) = self.consume_and_synchronize(
+            TokenKind::Identifier,
+            "pangalan pagkatapos ng `paraan`",
+            SyncSet::LBRACE,
+        ) else {
+            return Stmt::new_dummy();
+        };
+
+        let Some(_) = self.consume_and_synchronize(
+            TokenKind::LParen,
+            "`(` pagkatapos ng pangalan",
+            SyncSet::LBRACE,
+        ) else {
+            return Stmt::new_dummy();
+        };
+        let params = match self.parse_params() {
+            Ok(params) => params,
+            Err(e) => {
+                self.record(e);
+                self.synchronize(SyncSet::LBRACE);
+                return Stmt::new_dummy();
+            }
+        };
+        let Some(_) = self.consume_and_synchronize(TokenKind::RParen, "`)`", SyncSet::LBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+
+        let return_type = if self.peek().kind == TokenKind::LBrace {
+            TolType::Void
+        } else {
+            match self.parse_type() {
+                Ok(ty) => ty,
+                Err(e) => {
+                    self.record(e);
+                    self.synchronize(SyncSet::LBRACE);
+                    TolType::Void
+                }
+            }
+        };
+
+        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+        let block = self.parse_block();
+        let end = if let Some(t) =
+            self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
+        {
+            t.span.end
+        } else {
+            return Stmt::new_dummy();
+        };
+
+        Stmt {
+            kind: StmtKind::Paraan {
+                id,
+                return_type,
+                params,
+                block: Box::new(block),
+            },
+            span: start..end,
+        }
+    }
+
+    fn parse_params(&mut self) -> Result<Vec<ParamInfo>, CompilerError> {
+        let mut params = Vec::new();
+        while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
+            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+            self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+            let ttype = self.parse_type()?;
+            params.push(ParamInfo {
+                id: id.lexeme,
+                ttype,
+            });
+
+            if self.peek().kind == TokenKind::Comma {
+                self.advance();
+            } else if self.peek().kind != TokenKind::RParen {
+                return Err(CompilerError::UnexpectedToken {
+                    expected: "umasa ng `,`".to_string(),
+                    span: self.peek().span().into(),
+                    help: Some(
+                        "Mas mabuti kung lagyan mo ng `,` bago matapos ang listahan ng parametro"
+                            .to_string(),
+                    ),
+                });
+            }
+        }
+
+        Ok(params)
+    }
+
+    fn parse_block(&mut self) -> Stmt {
+        let mut stmts = Vec::new();
+        let start = self.peek().span.start;
+
+        while !self.is_at_eof() && self.peek().kind != TokenKind::RBrace {
+            stmts.push(self.parse_statement().unwrap());
+        }
+
+        Stmt {
+            kind: StmtKind::Block { stmts },
             span: start..self.previous().span.end,
         }
     }
@@ -185,7 +324,7 @@ impl Parser {
     fn parse_expression(&mut self, prec: u8) -> Result<Expr, CompilerError> {
         let mut left = self.nud()?;
 
-        while !self.is_at_end() {
+        while !self.is_at_eof() {
             let op = self.peek().clone();
             if operators::get_infix_op(op.kind()).precedence() <= prec {
                 break;
@@ -297,6 +436,7 @@ impl Parser {
             if set.contains(SyncSet::SEMI) && p == &TokenKind::Semicolon
                 || set.contains(SyncSet::RBRACE) && p == &TokenKind::RBrace
                 || set.contains(SyncSet::STMT) && p.starts_a_statement()
+                || set.contains(SyncSet::LBRACE) && p == &TokenKind::LBrace
             {
                 return;
             }
@@ -385,5 +525,6 @@ bitflags! {
         const SEMI = 1 << 0;
         const RBRACE = 1 << 1;
         const STMT = 1 << 2;
+        const LBRACE = 1 << 3;
     }
 }

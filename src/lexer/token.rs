@@ -120,7 +120,10 @@ pub enum TokenKind {
 
 impl TokenKind {
     pub fn starts_a_statement(&self) -> bool {
-        matches!(self, TokenKind::Ang)
+        matches!(
+            self,
+            TokenKind::Ang | TokenKind::Paraan | TokenKind::Semicolon
+        )
     }
 
     pub fn starts_an_expression(&self) -> bool {

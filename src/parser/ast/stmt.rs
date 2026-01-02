@@ -15,6 +15,13 @@ impl Stmt {
             span: 0..0,
         }
     }
+
+    pub fn new_null() -> Self {
+        Self {
+            kind: StmtKind::Null,
+            span: 0..0,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -23,7 +30,7 @@ pub enum StmtKind {
         id: Token,
         return_type: TolType,
         params: Vec<ParamInfo>,
-        block: Expr,
+        block: Box<Stmt>,
     },
     Ang {
         id: Token,
@@ -39,6 +46,10 @@ pub enum StmtKind {
         id: Token,
         // rhs: Expr,
     },
+    Block {
+        stmts: Vec<Stmt>,
+    },
+    Null,
 
     // Special
     Dummy,

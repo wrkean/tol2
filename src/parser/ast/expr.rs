@@ -10,35 +10,13 @@ pub struct Expr {
 
 #[derive(Debug)]
 pub enum ExprKind {
-    Integer {
-        lexeme: String,
-    },
-    Float {
-        lexeme: String,
-    },
-    Boolean {
-        lexeme: String,
-    },
-    Add {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Sub {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Mult {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Div {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Block {
-        stmts: Vec<Stmt>,
-        value: Option<Box<Expr>>,
-    },
+    Integer { lexeme: String },
+    Float { lexeme: String },
+    Boolean { lexeme: String },
+    Add { left: Box<Expr>, right: Box<Expr> },
+    Sub { left: Box<Expr>, right: Box<Expr> },
+    Mult { left: Box<Expr>, right: Box<Expr> },
+    Div { left: Box<Expr>, right: Box<Expr> },
 
     // Special
     Dummy,
@@ -69,7 +47,6 @@ impl fmt::Display for Expr {
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
             ExprKind::Div { left, right } => write!(f, "(/ {} {})", left, right),
-            ExprKind::Block { stmts, .. } => write!(f, "{{ {:?} }}", stmts),
             ExprKind::Dummy => write!(f, "<dummy>"),
         }
     }
