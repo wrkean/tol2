@@ -10,7 +10,7 @@ function_declaration = "paraan" , identifier , "(" , [ parameter_list ] , ")" , 
 param = identifier , ":" , type
 parameter_list = param , { ","  param } , [ "," ] ;
 for_statement = "sa" , expression , [ "=>" , identifier ] , block ;
-while_statement = "habang" , [ expression ] , block ;
+while_statement = "habang" , expression , block ;
 expression = number
     | boolean
     | string

@@ -3,5 +3,9 @@ paraan x(hi: i32) {
         ang i: i32 = 5;
     }
 
+    habang 2 - 3 {
+        dapat x: i32 = 5;
+    }
+
     dapat x: i64 = 5;
 }

@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use clap::builder::TryMapValueParser;
 
 use crate::{
     error::CompilerError,
@@ -63,6 +62,7 @@ impl Parser {
             TokenKind::Ang | TokenKind::Dapat => Ok(self.parse_angdapat()),
             TokenKind::Paraan => Ok(self.parse_paraan()),
             TokenKind::Sa => Ok(self.parse_sa()),
+            TokenKind::Habang => Ok(self.parse_habang()),
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -291,6 +291,39 @@ impl Parser {
                 block: Box::new(block),
             },
             span: start..end_tok.span.end,
+        }
+    }
+
+    fn parse_habang(&mut self) -> Stmt {
+        let Some(start_tok) =
+            self.consume_and_synchronize(TokenKind::Habang, "`habang`", SyncSet::LBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+        let cond = match self.parse_expression(0) {
+            Ok(ex) => ex,
+            Err(e) => {
+                self.record(e);
+                self.synchronize(SyncSet::LBRACE);
+                return Stmt::new_dummy();
+            }
+        };
+        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+        let block = self.parse_block();
+        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
+        else {
+            return Stmt::new_dummy();
+        };
+
+        Stmt {
+            kind: StmtKind::Habang {
+                cond,
+                block: Box::new(block),
+            },
+            span: start_tok.span.start..end_tok.span.end,
         }
     }
 

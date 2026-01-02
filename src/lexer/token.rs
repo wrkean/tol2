@@ -127,6 +127,7 @@ impl TokenKind {
                 | TokenKind::Paraan
                 | TokenKind::Semicolon
                 | TokenKind::Sa
+                | TokenKind::Habang
         )
     }
 

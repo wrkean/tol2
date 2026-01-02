@@ -51,6 +51,10 @@ pub enum StmtKind {
         bind: Option<Token>,
         block: Box<Stmt>,
     },
+    Habang {
+        cond: Expr,
+        block: Box<Stmt>,
+    },
     Block {
         stmts: Vec<Stmt>,
     },
