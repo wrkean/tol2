@@ -1,3 +1,5 @@
+use bitflags::bitflags;
+
 use crate::{
     error::CompilerError,
     lexer::token::{Token, TokenKind},
@@ -63,71 +65,49 @@ impl Parser {
 
     fn parse_ang(&mut self) -> Stmt {
         let start = self.advance().span.start;
-        let id = match self.consume(TokenKind::Identifier, "pangalan pagkatapos ng `ang`") {
-            Ok(t) => t.to_owned(),
-            Err(e) => {
-                self.record(e);
-                self.synchronize_to_stmt();
-                return Stmt::new_dummy();
-            }
+
+        let Some(id) = self.consume_and_synchronize(
+            TokenKind::Identifier,
+            "pangalan pagkatapos ng `ang`",
+            SyncSet::STMT | SyncSet::RBRACE,
+        ) else {
+            return Stmt::new_dummy();
         };
-        match self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan") {
-            Ok(_) => {}
-            Err(e) => {
-                self.record(e);
-                self.synchronize_to_stmt();
-                return Stmt {
-                    kind: StmtKind::Ang {
-                        id,
-                        ttype: TolType::Void,
-                        rhs: Expr::new_dummy(),
-                    },
-                    span: start..self.previous().span.end,
-                };
-            }
+        let Some(_) = self.consume_and_synchronize(
+            TokenKind::Colon,
+            "`:` pagkatapos ng pangalan",
+            SyncSet::STMT | SyncSet::RBRACE,
+        ) else {
+            return Stmt::new_dummy();
         };
         let ttype = match self.parse_type() {
             Ok(t) => t,
             Err(e) => {
                 self.record(e);
-                self.synchronize_until(|tk| {
-                    tk == &TokenKind::Equal
-                        || tk.starts_an_expression()
-                        || tk == &TokenKind::Semicolon
-                });
-                TolType::Void
+                self.synchronize(SyncSet::STMT | SyncSet::RBRACE);
+                return Stmt::new_dummy();
             }
         };
-        match self.consume(TokenKind::Equal, "`=`") {
-            Ok(_) => {}
-            Err(e) => {
-                self.record(e);
-                self.synchronize_to_stmt();
-                return Stmt {
-                    kind: StmtKind::Ang {
-                        id,
-                        ttype,
-                        rhs: Expr::new_dummy(),
-                    },
-                    span: start..self.previous().span.end,
-                };
-            }
+
+        let Some(_) =
+            self.consume_and_synchronize(TokenKind::Equal, "`=`", SyncSet::STMT | SyncSet::RBRACE)
+        else {
+            return Stmt::new_dummy();
         };
         let rhs = match self.parse_expression(0) {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
-                self.synchronize_until(|tk| tk == &TokenKind::Semicolon);
-                Expr::new_dummy()
+                self.synchronize(SyncSet::STMT | SyncSet::RBRACE);
+                return Stmt::new_dummy();
             }
         };
-        match self.consume(TokenKind::Semicolon, "`;`") {
-            Ok(_) => {}
-            Err(e) => {
-                self.record(e);
-                self.synchronize_to_stmt();
-            }
-        };
+
+        self.consume_and_synchronize(
+            TokenKind::Semicolon,
+            "`;` pagkatapos ng expresyon",
+            SyncSet::STMT | SyncSet::RBRACE,
+        );
 
         Stmt {
             kind: StmtKind::Ang { id, ttype, rhs },
@@ -310,22 +290,17 @@ impl Parser {
         self.errors.push(err);
     }
 
-    fn synchronize_until(&mut self, predicate: fn(&TokenKind) -> bool) {
-        if self.is_at_eof() {
-            return;
-        }
+    fn synchronize(&mut self, set: SyncSet) {
+        while !self.is_at_eof() {
+            let p = self.peek().kind();
 
-        while !self.is_at_eof() && !predicate(self.peek().kind()) {
-            self.advance();
-        }
-    }
+            if set.contains(SyncSet::SEMI) && p == &TokenKind::Semicolon
+                || set.contains(SyncSet::RBRACE) && p == &TokenKind::RBrace
+                || set.contains(SyncSet::STMT) && p.starts_a_statement()
+            {
+                return;
+            }
 
-    fn synchronize_to_stmt(&mut self) {
-        if self.is_at_eof() {
-            return;
-        }
-
-        while !self.is_at_eof() && !self.peek().kind.starts_a_statement() {
             self.advance();
         }
     }
@@ -369,13 +344,29 @@ impl Parser {
         } else {
             Err(CompilerError::UnexpectedToken {
                 expected: format!(
-                    "Umasa ng {} pero nakita ay {}",
+                    "Umasa ng {} pero nakita ay `{}`",
                     expected_str,
                     self.peek().lexeme()
                 ),
                 span: self.peek().span().into(),
                 help: None,
             })
+        }
+    }
+
+    fn consume_and_synchronize(
+        &mut self,
+        expected: TokenKind,
+        expected_str: &str,
+        set: SyncSet,
+    ) -> Option<Token> {
+        match self.consume(expected, expected_str) {
+            Ok(t) => Some(t.to_owned()),
+            Err(e) => {
+                self.record(e);
+                self.synchronize(set);
+                None
+            }
         }
     }
 
@@ -386,5 +377,13 @@ impl Parser {
 
     fn is_at_eof(&self) -> bool {
         self.tokens[self.current].kind == TokenKind::Eof
+    }
+}
+
+bitflags! {
+    struct SyncSet: u32 {
+        const SEMI = 1 << 0;
+        const RBRACE = 1 << 1;
+        const STMT = 1 << 2;
     }
 }
