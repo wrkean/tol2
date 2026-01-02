@@ -1,3 +1,5 @@
 paraan (hi: i32) {
     ang : i64 = 5;
 }
+
+paraan (x)

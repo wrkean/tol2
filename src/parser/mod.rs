@@ -60,7 +60,7 @@ impl Parser {
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
         dbg!(self.peek().kind());
         match self.peek().kind() {
-            TokenKind::Ang => Ok(self.parse_ang()),
+            TokenKind::Ang | TokenKind::Dapat => Ok(self.parse_angdapat()),
             TokenKind::Paraan => Ok(self.parse_paraan()),
             TokenKind::Semicolon => {
                 self.advance();
@@ -80,9 +80,13 @@ impl Parser {
         }
     }
 
-    fn parse_ang(&mut self) -> Stmt {
+    fn parse_angdapat(&mut self) -> Stmt {
+        let kind = match self.peek().kind() {
+            k @ (TokenKind::Ang | TokenKind::Dapat) => k.to_owned(),
+            _ => return Stmt::new_dummy(),
+        };
         let start = if let Some(ang) =
-            self.consume_and_synchronize(TokenKind::Ang, "`ang`", SyncSet::STMT | SyncSet::RBRACE)
+            self.consume_and_synchronize(kind, "`ang` o `dapat`", SyncSet::STMT | SyncSet::RBRACE)
         {
             ang.span.start
         } else {
@@ -91,7 +95,7 @@ impl Parser {
 
         let Some(id) = self.consume_and_synchronize(
             TokenKind::Identifier,
-            "pangalan pagkatapos ng `ang`",
+            "pangalan pagkatapos ng `ang` o `dapat`",
             SyncSet::STMT | SyncSet::RBRACE,
         ) else {
             return Stmt::new_dummy();
