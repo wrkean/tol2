@@ -1,5 +1,7 @@
-paraan (hi: i32) {
-    ang : i64 = 5;
-}
+paraan x(hi: i32) {
+    sa 1 - 2 {
+        ang i: i32 = 5;
+    }
 
-paraan (x)
+    dapat x: i64 = 5;
+}

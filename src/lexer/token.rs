@@ -122,7 +122,11 @@ impl TokenKind {
     pub fn starts_a_statement(&self) -> bool {
         matches!(
             self,
-            TokenKind::Ang | TokenKind::Paraan | TokenKind::Semicolon
+            TokenKind::Ang
+                | TokenKind::Dapat
+                | TokenKind::Paraan
+                | TokenKind::Semicolon
+                | TokenKind::Sa
         )
     }
 

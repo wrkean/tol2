@@ -62,6 +62,7 @@ impl Parser {
         match self.peek().kind() {
             TokenKind::Ang | TokenKind::Dapat => Ok(self.parse_angdapat()),
             TokenKind::Paraan => Ok(self.parse_paraan()),
+            TokenKind::Sa => Ok(self.parse_sa()),
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -197,11 +198,8 @@ impl Parser {
             return Stmt::new_dummy();
         };
         let block = self.parse_block();
-        let end = if let Some(t) =
-            self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
-        {
-            t.span.end
-        } else {
+        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
+        else {
             return Stmt::new_dummy();
         };
 
@@ -212,7 +210,7 @@ impl Parser {
                 params,
                 block: Box::new(block),
             },
-            span: start..end,
+            span: start..end_tok.span.end,
         }
     }
 
@@ -242,6 +240,58 @@ impl Parser {
         }
 
         Ok(params)
+    }
+
+    fn parse_sa(&mut self) -> Stmt {
+        let start = if let Some(sa_tok) =
+            self.consume_and_synchronize(TokenKind::Sa, "`sa`", SyncSet::LBRACE)
+        {
+            sa_tok.span.start
+        } else {
+            return Stmt::new_dummy();
+        };
+
+        let cond = match self.parse_expression(0) {
+            Ok(ex) => ex,
+            Err(e) => {
+                self.record(e);
+                self.synchronize(SyncSet::LBRACE);
+                return Stmt::new_dummy();
+            }
+        };
+
+        let bind = if self.peek().kind == TokenKind::Arrow {
+            self.advance();
+            let Some(t) = self.consume_and_synchronize(
+                TokenKind::Identifier,
+                "pangalan pagkatapos ng `=>`",
+                SyncSet::LBRACE,
+            ) else {
+                return Stmt::new_dummy();
+            };
+            Some(t)
+        } else {
+            None
+        };
+
+        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+        let block = self.parse_block();
+        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
+        else {
+            return Stmt::new_dummy();
+        };
+
+        Stmt {
+            kind: StmtKind::Sa {
+                cond,
+                bind,
+                block: Box::new(block),
+            },
+            span: start..end_tok.span.end,
+        }
     }
 
     fn parse_block(&mut self) -> Stmt {
