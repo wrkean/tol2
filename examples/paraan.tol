@@ -3,8 +3,8 @@ paraan x(hi: i32) {
         ang i: i32 = 5;
     }
 
-    habang 2 - 3 {
-        dapat x: i32 = 5;
+    habang tama {
+        dapat x: i32 = 5 + 2 - (10 + 42 / 23);
     }
 
     dapat x: i64 = 5;

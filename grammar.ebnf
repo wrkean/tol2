@@ -13,8 +13,7 @@ for_statement = "sa" , expression , [ "=>" , identifier ] , block ;
 while_statement = "habang" , expression , block ;
 expression = number
     | boolean
-    | string
-    | arithmetic
+    | string | arithmetic
     | equality
     | relational
     | block ;

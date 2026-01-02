@@ -446,6 +446,15 @@ impl Parser {
                     span: current_tok.span(),
                 })
             }
+            TokenKind::Tama | TokenKind::Mali => {
+                self.advance();
+                Ok(Expr {
+                    kind: ExprKind::Boolean {
+                        lexeme: current_tok.lexeme.clone(),
+                    },
+                    span: current_tok.span(),
+                })
+            }
             TokenKind::LParen => {
                 self.advance();
                 let expr = self.parse_expression(0)?;
@@ -464,46 +473,28 @@ impl Parser {
         };
 
         match op.kind() {
-            TokenKind::Plus => {
+            k @ (TokenKind::Plus | TokenKind::Minus | TokenKind::Star | TokenKind::Slash) => {
                 let right = self.parse_expression(precedence)?;
                 let span = left.span.start..right.span.end;
                 Ok(Expr {
-                    kind: ExprKind::Add {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    },
-                    span,
-                })
-            }
-            TokenKind::Minus => {
-                let right = self.parse_expression(precedence)?;
-                let span = left.span.start..right.span.end;
-                Ok(Expr {
-                    kind: ExprKind::Sub {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    },
-                    span,
-                })
-            }
-            TokenKind::Star => {
-                let right = self.parse_expression(precedence)?;
-                let span = left.span.start..right.span.end;
-                Ok(Expr {
-                    kind: ExprKind::Mult {
-                        left: Box::new(left),
-                        right: Box::new(right),
-                    },
-                    span,
-                })
-            }
-            TokenKind::Slash => {
-                let right = self.parse_expression(precedence)?;
-                let span = left.span.start..right.span.end;
-                Ok(Expr {
-                    kind: ExprKind::Mult {
-                        left: Box::new(left),
-                        right: Box::new(right),
+                    kind: match k {
+                        TokenKind::Plus => ExprKind::Add {
+                            left: Box::new(left),
+                            right: Box::new(right),
+                        },
+                        TokenKind::Minus => ExprKind::Sub {
+                            left: Box::new(left),
+                            right: Box::new(right),
+                        },
+                        TokenKind::Star => ExprKind::Mult {
+                            left: Box::new(left),
+                            right: Box::new(right),
+                        },
+                        TokenKind::Slash => ExprKind::Div {
+                            left: Box::new(left),
+                            right: Box::new(right),
+                        },
+                        _ => unreachable!(),
                     },
                     span,
                 })
