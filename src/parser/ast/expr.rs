@@ -13,6 +13,7 @@ pub enum ExprKind {
     Integer { lexeme: String },
     Float { lexeme: String },
     Boolean { lexeme: String },
+    Identifier { lexeme: String },
     Add { left: Box<Expr>, right: Box<Expr> },
     Sub { left: Box<Expr>, right: Box<Expr> },
     Mult { left: Box<Expr>, right: Box<Expr> },
@@ -23,6 +24,7 @@ pub enum ExprKind {
     Less { left: Box<Expr>, right: Box<Expr> },
     GreaterEqual { left: Box<Expr>, right: Box<Expr> },
     LessEqual { left: Box<Expr>, right: Box<Expr> },
+    FnCall { callee: Box<Expr>, args: Vec<Expr> },
 
     // Special
     Dummy,
@@ -48,7 +50,8 @@ impl fmt::Display for Expr {
         match &self.kind {
             ExprKind::Integer { lexeme }
             | ExprKind::Float { lexeme }
-            | ExprKind::Boolean { lexeme } => write!(f, "{}", lexeme),
+            | ExprKind::Boolean { lexeme }
+            | ExprKind::Identifier { lexeme } => write!(f, "{}", lexeme),
             ExprKind::Add { left, right } => write!(f, "(+ {} {})", left, right),
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
@@ -59,6 +62,7 @@ impl fmt::Display for Expr {
             ExprKind::Less { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::GreaterEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::LessEqual { left, right } => write!(f, "(!= {} {})", left, right),
+            ExprKind::FnCall { callee, args } => write!(f, "{}({:#?})", callee, args),
             ExprKind::Dummy => write!(f, "<dummy>"),
         }
     }

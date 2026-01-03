@@ -40,6 +40,7 @@ pub fn get_infix_op(kind: &TokenKind) -> TolOp {
         TokenKind::Minus => TolOp::new(Left, 5),
         TokenKind::Star => TolOp::new(Left, 6),
         TokenKind::Slash => TolOp::new(Left, 6),
+        TokenKind::LParen => TolOp::new(Left, 7),
         _ => TolOp::new(Left, 0),
     }
 }

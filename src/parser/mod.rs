@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use predicates::ord::le;
 
 use crate::{
     error::CompilerError,
@@ -455,6 +456,15 @@ impl Parser {
                     span: current_tok.span(),
                 })
             }
+            TokenKind::Identifier => {
+                self.advance();
+                Ok(Expr {
+                    kind: ExprKind::Identifier {
+                        lexeme: current_tok.lexeme.clone(),
+                    },
+                    span: current_tok.span(),
+                })
+            }
             TokenKind::LParen => {
                 self.advance();
                 let expr = self.parse_expression(0)?;
@@ -473,31 +483,70 @@ impl Parser {
             Associativity::Right => infix.precedence() + 1,
         };
 
-        let make_expr =
-            |constructor: fn(Box<Expr>, Box<Expr>) -> ExprKind| -> Result<Expr, CompilerError> {
-                let right = self.parse_expression(precedence)?;
-                let span = left.span.start..right.span.end;
-                Ok(Expr {
-                    kind: constructor(Box::new(left), Box::new(right)),
-                    span,
-                })
-            };
+        let mut make_expr = |left: Expr,
+                             constructor: fn(Box<Expr>, Box<Expr>) -> ExprKind|
+         -> Result<Expr, CompilerError> {
+            let right = self.parse_expression(precedence)?;
+            let span = left.span.start..right.span.end;
+            Ok(Expr {
+                kind: constructor(Box::new(left), Box::new(right)),
+                span,
+            })
+        };
 
         match op.kind() {
-            TokenKind::Plus => make_expr(|l, r| ExprKind::Add { left: l, right: r }),
-            TokenKind::Minus => make_expr(|l, r| ExprKind::Sub { left: l, right: r }),
-            TokenKind::Star => make_expr(|l, r| ExprKind::Mult { left: l, right: r }),
-            TokenKind::Slash => make_expr(|l, r| ExprKind::Div { left: l, right: r }),
-            TokenKind::EqualEqual => make_expr(|l, r| ExprKind::Equality { left: l, right: r }),
-            TokenKind::BangEqual => make_expr(|l, r| ExprKind::InEquality { left: l, right: r }),
-            TokenKind::Greater => make_expr(|l, r| ExprKind::Greater { left: l, right: r }),
-            TokenKind::Less => make_expr(|l, r| ExprKind::Less { left: l, right: r }),
-            TokenKind::GreaterEqual => {
-                make_expr(|l, r| ExprKind::GreaterEqual { left: l, right: r })
+            TokenKind::Plus => make_expr(left, |l, r| ExprKind::Add { left: l, right: r }),
+            TokenKind::Minus => make_expr(left, |l, r| ExprKind::Sub { left: l, right: r }),
+            TokenKind::Star => make_expr(left, |l, r| ExprKind::Mult { left: l, right: r }),
+            TokenKind::Slash => make_expr(left, |l, r| ExprKind::Div { left: l, right: r }),
+            TokenKind::EqualEqual => {
+                make_expr(left, |l, r| ExprKind::Equality { left: l, right: r })
             }
-            TokenKind::LessEqual => make_expr(|l, r| ExprKind::LessEqual { left: l, right: r }),
+            TokenKind::BangEqual => {
+                make_expr(left, |l, r| ExprKind::InEquality { left: l, right: r })
+            }
+            TokenKind::Greater => make_expr(left, |l, r| ExprKind::Greater { left: l, right: r }),
+            TokenKind::Less => make_expr(left, |l, r| ExprKind::Less { left: l, right: r }),
+            TokenKind::GreaterEqual => {
+                make_expr(left, |l, r| ExprKind::GreaterEqual { left: l, right: r })
+            }
+            TokenKind::LessEqual => {
+                make_expr(left, |l, r| ExprKind::LessEqual { left: l, right: r })
+            }
+            TokenKind::LParen => self.parse_fncall(left),
             _ => todo!(),
         }
+    }
+
+    fn parse_fncall(&mut self, callee: Expr) -> Result<Expr, CompilerError> {
+        let mut args = Vec::new();
+        let start = self.peek().span.start;
+
+        while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
+            args.push(self.parse_expression(0)?);
+
+            if self.peek().kind == TokenKind::Comma {
+                self.advance();
+            } else if self.peek().kind != TokenKind::RParen {
+                return Err(CompilerError::UnexpectedToken {
+                    expected: "umasa ng `,` o `)`".to_string(),
+                    span: (start..self.peek().span.end).into(),
+                    help: Some(
+                        "mas maganda kung lagyan mo ng `,` sa pinakahuling argumento".to_string(),
+                    ),
+                });
+            }
+        }
+
+        self.consume(TokenKind::RParen, "`)`")?;
+
+        Ok(Expr {
+            kind: ExprKind::FnCall {
+                callee: Box::new(callee),
+                args,
+            },
+            span: start..self.peek().span.end,
+        })
     }
 
     fn record(&mut self, err: CompilerError) {
