@@ -1,7 +1,5 @@
 use std::{fmt, ops::Range};
 
-use crate::parser::ast::stmt::Stmt;
-
 #[derive(Debug)]
 pub struct Expr {
     pub kind: ExprKind,
@@ -10,21 +8,66 @@ pub struct Expr {
 
 #[derive(Debug)]
 pub enum ExprKind {
-    Integer { lexeme: String },
-    Float { lexeme: String },
-    Boolean { lexeme: String },
-    Identifier { lexeme: String },
-    Add { left: Box<Expr>, right: Box<Expr> },
-    Sub { left: Box<Expr>, right: Box<Expr> },
-    Mult { left: Box<Expr>, right: Box<Expr> },
-    Div { left: Box<Expr>, right: Box<Expr> },
-    Equality { left: Box<Expr>, right: Box<Expr> },
-    InEquality { left: Box<Expr>, right: Box<Expr> },
-    Greater { left: Box<Expr>, right: Box<Expr> },
-    Less { left: Box<Expr>, right: Box<Expr> },
-    GreaterEqual { left: Box<Expr>, right: Box<Expr> },
-    LessEqual { left: Box<Expr>, right: Box<Expr> },
-    FnCall { callee: Box<Expr>, args: Vec<Expr> },
+    Integer {
+        lexeme: String,
+    },
+    Float {
+        lexeme: String,
+    },
+    Boolean {
+        lexeme: String,
+    },
+    Identifier {
+        lexeme: String,
+    },
+    Add {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Sub {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Mult {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Div {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Equality {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    InEquality {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Greater {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Less {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    GreaterEqual {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    LessEqual {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    FnCall {
+        callee: Box<Expr>,
+        args: Vec<Expr>,
+    },
+    StructLiteral {
+        left: Box<Expr>,
+        fields: Vec<StructLiteralField>,
+    },
 
     // Special
     Dummy,
@@ -41,6 +84,10 @@ impl Expr {
             kind: ExprKind::Dummy,
             span: 0..0,
         }
+    }
+
+    pub fn is_lvalue(&self) -> bool {
+        matches!(&self.kind, ExprKind::Identifier { .. })
     }
 }
 
@@ -64,6 +111,10 @@ impl fmt::Display for Expr {
             ExprKind::LessEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::FnCall { callee, args } => write!(f, "{}({:#?})", callee, args),
             ExprKind::Dummy => write!(f, "<dummy>"),
+            ExprKind::StructLiteral { left, fields } => write!(f, "{} {{ {:#?} }}", left, fields),
         }
     }
 }
+
+#[derive(Debug)]
+pub struct StructLiteralField(pub String, pub Option<Expr>);

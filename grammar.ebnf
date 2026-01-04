@@ -8,7 +8,7 @@ variable_declaration = "ang" , identifier , ":" , type , "=" expression ";" ;
 const_declaration = "dapat" , identifier , ":" , type , "=" expression ";" ;
 function_declaration = "paraan" , identifier , "(" , [ parameter_list ] , ")" , block ;
 param = identifier , ":" , type
-parameter_list = param , { ","  param } , [ "," ] ;
+parameter_list = param , { "," , param } , [ "," ] ;
 for_statement = "sa" , expression , [ "=>" , identifier ] , block ;
 while_statement = "habang" , expression , block ;
 expression = number
@@ -16,7 +16,9 @@ expression = number
     | string | arithmetic
     | equality
     | relational
-    | block ;
+    | block
+    | fncall
+    | struct_literal ;
 number = integer | float ;
 integer = digit , { digit | "_" } ;
 float = integer , "." , integer ;
@@ -30,3 +32,6 @@ arithmetic = number , ( "+" | "-" | "*" | "/" ) , number ;
 equality = number , ( "!=" | "==" ) , number ;
 relational = number , ( ">" | ">=" | "<" | "<=" ) , number ;
 block = "{" , { statement } , [ expression ] , "}" ;
+fncall = expression , "(" , [ expression , { "," , expression } , [ "," ] ] , ")"  ;
+struct_literal = struct_name , "{" struct_literal_field , { struct_literal_field } , [ "," ]  "}" ;
+struct_literal_field = identifier , [ ":" , expression ] ;

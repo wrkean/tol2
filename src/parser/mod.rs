@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use predicates::ord::le;
 
 use crate::{
     error::CompilerError,
@@ -7,16 +6,18 @@ use crate::{
     module::{lexed_module::LexedModule, parsed_module::ParsedModule},
     parser::{
         ast::{
-            expr::{Expr, ExprKind},
+            expr::{Expr, ExprKind, StructLiteralField},
             stmt::{ParamInfo, Stmt, StmtKind},
         },
         operators::Associativity,
+        parsing_context::ExprParseContext,
     },
     toltype::TolType,
 };
 
 pub mod ast;
 pub mod operators;
+mod parsing_context;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -123,7 +124,7 @@ impl Parser {
         else {
             return Stmt::new_dummy();
         };
-        let rhs = match self.parse_expression(0) {
+        let rhs = match self.parse_expression(0, ExprParseContext::AngDapatStatement) {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
@@ -135,7 +136,7 @@ impl Parser {
         self.consume_and_synchronize(
             TokenKind::Semicolon,
             "`;` pagkatapos ng expresyon",
-            SyncSet::STMT | SyncSet::RBRACE,
+            SyncSet::STMT,
         );
 
         Stmt {
@@ -252,7 +253,7 @@ impl Parser {
             return Stmt::new_dummy();
         };
 
-        let cond = match self.parse_expression(0) {
+        let cond = match self.parse_expression(0, ExprParseContext::SaStatement) {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
@@ -301,7 +302,7 @@ impl Parser {
         else {
             return Stmt::new_dummy();
         };
-        let cond = match self.parse_expression(0) {
+        let cond = match self.parse_expression(0, ExprParseContext::HabangStatement) {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
@@ -409,11 +410,15 @@ impl Parser {
         }
     }
 
-    fn parse_expression(&mut self, prec: u8) -> Result<Expr, CompilerError> {
+    fn parse_expression(&mut self, prec: u8, ctx: ExprParseContext) -> Result<Expr, CompilerError> {
         let mut left = self.nud()?;
 
         while !self.is_at_eof() {
             let op = self.peek().clone();
+            if left.is_lvalue() && op.kind == TokenKind::LBrace && ctx.can_have_struct_lit() {
+                return self.parse_struct_literal(left);
+            }
+
             if operators::get_infix_op(op.kind()).precedence() <= prec {
                 break;
             }
@@ -467,7 +472,7 @@ impl Parser {
             }
             TokenKind::LParen => {
                 self.advance();
-                let expr = self.parse_expression(0)?;
+                let expr = self.parse_expression(0, ExprParseContext::InExpression)?;
                 self.consume(TokenKind::RParen, ")")?;
 
                 Ok(expr)
@@ -486,7 +491,7 @@ impl Parser {
         let mut make_expr = |left: Expr,
                              constructor: fn(Box<Expr>, Box<Expr>) -> ExprKind|
          -> Result<Expr, CompilerError> {
-            let right = self.parse_expression(precedence)?;
+            let right = self.parse_expression(precedence, ExprParseContext::InExpression)?;
             let span = left.span.start..right.span.end;
             Ok(Expr {
                 kind: constructor(Box::new(left), Box::new(right)),
@@ -523,7 +528,7 @@ impl Parser {
         let start = self.peek().span.start;
 
         while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
-            args.push(self.parse_expression(0)?);
+            args.push(self.parse_expression(0, ExprParseContext::Argument)?);
 
             if self.peek().kind == TokenKind::Comma {
                 self.advance();
@@ -546,6 +551,45 @@ impl Parser {
                 args,
             },
             span: start..self.peek().span.end,
+        })
+    }
+
+    fn parse_struct_literal(&mut self, left: Expr) -> Result<Expr, CompilerError> {
+        let start = left.span.start;
+        self.consume(TokenKind::LBrace, "`{`")?;
+        let mut fields = Vec::new();
+
+        while !self.is_at_eof_or_delimiter(TokenKind::RBrace) {
+            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+            let ex = if self.peek().kind == TokenKind::Colon {
+                self.advance();
+
+                Some(self.parse_expression(0, ExprParseContext::StructLiteralField)?)
+            } else {
+                None
+            };
+
+            fields.push(StructLiteralField(id.lexeme, ex));
+
+            if self.peek().kind == TokenKind::Comma {
+                self.advance();
+            } else if self.peek().kind != TokenKind::RBrace {
+                return Err(CompilerError::UnexpectedToken {
+                    expected: "`,` o `}`".to_string(),
+                    span: (start..self.peek().span.end).into(),
+                    help: None,
+                });
+            }
+        }
+
+        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+
+        Ok(Expr {
+            kind: ExprKind::StructLiteral {
+                left: Box::new(left),
+                fields,
+            },
+            span: start..end,
         })
     }
 
@@ -641,6 +685,10 @@ impl Parser {
 
     fn is_at_eof(&self) -> bool {
         self.tokens[self.current].kind == TokenKind::Eof
+    }
+
+    fn is_at_eof_or_delimiter(&self, delimiter: TokenKind) -> bool {
+        self.is_at_eof() || self.peek().kind == delimiter
     }
 }
 
