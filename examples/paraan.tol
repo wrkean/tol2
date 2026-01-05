@@ -1,9 +1,6 @@
-paraan una() {
-    ang x: i32 = 1 + StructIto {
-        x: 1 + 4, y: 12 - 3
+paraan (): i32 {
+    ang x: i32 = 5;
+    ang st: i32 = Struct {
+        x: 5
     };
-}
-
-paraan again() {
-    ang x: i32  =5;
 }

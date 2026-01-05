@@ -7,7 +7,7 @@ use crate::{
     parser::{
         ast::{
             expr::{Expr, ExprKind, StructLiteralField},
-            stmt::{ParamInfo, Stmt, StmtKind},
+            stmt::{KungBranch, ParamInfo, Stmt, StmtKind},
         },
         operators::Associativity,
         parsing_context::ExprParseContext,
@@ -59,12 +59,13 @@ impl Parser {
     }
 
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
-        dbg!(self.peek().kind());
+        dbg!(self.peek().kind(), self.peek().lexeme());
         match self.peek().kind() {
             TokenKind::Ang | TokenKind::Dapat => Ok(self.parse_angdapat()),
             TokenKind::Paraan => Ok(self.parse_paraan()),
             TokenKind::Sa => Ok(self.parse_sa()),
             TokenKind::Habang => Ok(self.parse_habang()),
+            TokenKind::Kung => Ok(self.parse_kung()),
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -79,6 +80,16 @@ impl Parser {
 
                 Ok(block)
             }
+            TokenKind::RParen | TokenKind::RBrace => {
+                let delimiter_tok = self.peek().clone();
+                self.advance();
+                self.record(CompilerError::UnmatchedDelimiter {
+                    delimiter: delimiter_tok.lexeme,
+                    span: delimiter_tok.span.into(),
+                });
+
+                Ok(Stmt::new_dummy())
+            }
             _ => todo!(),
         }
     }
@@ -88,11 +99,9 @@ impl Parser {
             k @ (TokenKind::Ang | TokenKind::Dapat) => k.to_owned(),
             _ => return Stmt::new_dummy(),
         };
-        let start = if let Some(ang) =
+        let Some(start_tok) =
             self.consume_and_synchronize(kind, "`ang` o `dapat`", SyncSet::STMT | SyncSet::RBRACE)
-        {
-            ang.span.start
-        } else {
+        else {
             return Stmt::new_dummy();
         };
 
@@ -136,18 +145,18 @@ impl Parser {
         self.consume_and_synchronize(
             TokenKind::Semicolon,
             "`;` pagkatapos ng expresyon",
-            SyncSet::STMT,
+            SyncSet::STMT | SyncSet::RBRACE,
         );
 
         Stmt {
             kind: StmtKind::Ang { id, ttype, rhs },
-            span: start..self.previous().span.end,
+            span: start_tok.span.start..self.previous().span.end,
         }
     }
 
     fn parse_paraan(&mut self) -> Stmt {
         let start = if let Some(paraan) =
-            self.consume_and_synchronize(TokenKind::Paraan, "`paraan`", SyncSet::LBRACE)
+            self.consume_and_synchronize(TokenKind::Paraan, "`paraan`", SyncSet::STMT)
         {
             paraan.span.start
         } else {
@@ -157,7 +166,7 @@ impl Parser {
         let Some(id) = self.consume_and_synchronize(
             TokenKind::Identifier,
             "pangalan pagkatapos ng `paraan`",
-            SyncSet::LBRACE,
+            SyncSet::STMT,
         ) else {
             return Stmt::new_dummy();
         };
@@ -165,7 +174,7 @@ impl Parser {
         let Some(_) = self.consume_and_synchronize(
             TokenKind::LParen,
             "`(` pagkatapos ng pangalan",
-            SyncSet::LBRACE,
+            SyncSet::STMT,
         ) else {
             return Stmt::new_dummy();
         };
@@ -173,29 +182,31 @@ impl Parser {
             Ok(params) => params,
             Err(e) => {
                 self.record(e);
-                self.synchronize(SyncSet::LBRACE);
+                self.synchronize(SyncSet::STMT);
                 return Stmt::new_dummy();
             }
         };
-        let Some(_) = self.consume_and_synchronize(TokenKind::RParen, "`)`", SyncSet::LBRACE)
-        else {
+        let Some(_) = self.consume_and_synchronize(TokenKind::RParen, "`)`", SyncSet::STMT) else {
             return Stmt::new_dummy();
         };
 
-        let return_type = if self.peek().kind == TokenKind::LBrace {
-            TolType::Void
-        } else {
+        let return_type = if self.peek().kind == TokenKind::Colon {
+            self.advance();
+
             match self.parse_type() {
                 Ok(ty) => ty,
                 Err(e) => {
                     self.record(e);
-                    self.synchronize(SyncSet::LBRACE);
-                    TolType::Void
+                    self.synchronize(SyncSet::RBRACE);
+                    return Stmt::new_dummy();
                 }
             }
+        } else {
+            TolType::Void
         };
 
-        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
+        let Some(_) =
+            self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::STMT | SyncSet::RBRACE)
         else {
             return Stmt::new_dummy();
         };
@@ -246,7 +257,7 @@ impl Parser {
 
     fn parse_sa(&mut self) -> Stmt {
         let start = if let Some(sa_tok) =
-            self.consume_and_synchronize(TokenKind::Sa, "`sa`", SyncSet::LBRACE)
+            self.consume_and_synchronize(TokenKind::Sa, "`sa`", SyncSet::STMT)
         {
             sa_tok.span.start
         } else {
@@ -257,7 +268,7 @@ impl Parser {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
-                self.synchronize(SyncSet::LBRACE);
+                self.synchronize(SyncSet::STMT);
                 return Stmt::new_dummy();
             }
         };
@@ -267,7 +278,7 @@ impl Parser {
             let Some(t) = self.consume_and_synchronize(
                 TokenKind::Identifier,
                 "pangalan pagkatapos ng `=>`",
-                SyncSet::LBRACE,
+                SyncSet::STMT,
             ) else {
                 return Stmt::new_dummy();
             };
@@ -298,7 +309,7 @@ impl Parser {
 
     fn parse_habang(&mut self) -> Stmt {
         let Some(start_tok) =
-            self.consume_and_synchronize(TokenKind::Habang, "`habang`", SyncSet::LBRACE)
+            self.consume_and_synchronize(TokenKind::Habang, "`habang`", SyncSet::STMT)
         else {
             return Stmt::new_dummy();
         };
@@ -306,7 +317,7 @@ impl Parser {
             Ok(ex) => ex,
             Err(e) => {
                 self.record(e);
-                self.synchronize(SyncSet::LBRACE);
+                self.synchronize(SyncSet::STMT);
                 return Stmt::new_dummy();
             }
         };
@@ -326,6 +337,92 @@ impl Parser {
                 block: Box::new(block),
             },
             span: start_tok.span.start..end_tok.span.end,
+        }
+    }
+
+    fn parse_kung(&mut self) -> Stmt {
+        let mut branches = Vec::new();
+        let Some(start_tok) =
+            self.consume_and_synchronize(TokenKind::Kung, "`kung`", SyncSet::STMT)
+        else {
+            return Stmt::new_dummy();
+        };
+
+        // Parse initial `kung` statement
+        let cond = match self.parse_expression(0, ExprParseContext::KungStatement) {
+            Ok(ex) => Some(ex),
+            Err(e) => {
+                self.record(e);
+                self.synchronize(SyncSet::STMT);
+                return Stmt::new_dummy();
+            }
+        };
+        let Some(_) = self.consume_and_synchronize(
+            TokenKind::LBrace,
+            "`{` pagkatapos ng kondisyon",
+            SyncSet::STMT | SyncSet::RBRACE,
+        ) else {
+            return Stmt::new_dummy();
+        };
+        let block = self.parse_block();
+        let Some(_) =
+            self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT | SyncSet::RBRACE)
+        else {
+            return Stmt::new_dummy();
+        };
+
+        branches.push(KungBranch { cond, block });
+
+        // Parse following `kungdi` brannches
+        let mut end = 0;
+        while self.peek().kind == TokenKind::Kungdi {
+            let Some(_) =
+                self.consume_and_synchronize(TokenKind::Kungdi, "`kungdi`", SyncSet::STMT)
+            else {
+                return Stmt::new_dummy();
+            };
+            let cond = if self.peek().kind != TokenKind::LBrace {
+                match self.parse_expression(0, ExprParseContext::KungStatement) {
+                    Ok(ex) => Some(ex),
+                    Err(e) => {
+                        self.record(e);
+                        self.synchronize(SyncSet::RBRACE | SyncSet::STMT);
+                        return Stmt::new_dummy();
+                    }
+                }
+            } else {
+                None
+            };
+
+            let Some(_) = self.consume_and_synchronize(
+                TokenKind::LBrace,
+                "`{` pagkatapos ng `kungdi` o expresyon",
+                SyncSet::STMT | SyncSet::RBRACE,
+            ) else {
+                return Stmt::new_dummy();
+            };
+            let block = self.parse_block();
+            let Some(_) = self.consume_and_synchronize(
+                TokenKind::RBrace,
+                "`}`",
+                SyncSet::STMT | SyncSet::RBRACE,
+            ) else {
+                return Stmt::new_dummy();
+            };
+
+            let block_end = block.span.end;
+            let is_done = cond.is_none();
+            branches.push(KungBranch { cond, block });
+
+            if is_done {
+                end = block_end;
+                break;
+            }
+        }
+
+        Stmt {
+            kind: StmtKind::Kung { branches },
+            span: start_tok.span.start..end,
         }
     }
 
@@ -575,8 +672,8 @@ impl Parser {
                 self.advance();
             } else if self.peek().kind != TokenKind::RBrace {
                 return Err(CompilerError::UnexpectedToken {
-                    expected: "`,` o `}`".to_string(),
-                    span: (start..self.peek().span.end).into(),
+                    expected: "Umasa ng `,` o `}`".to_string(),
+                    span: self.peek().span().into(),
                     help: None,
                 });
             }
@@ -604,7 +701,6 @@ impl Parser {
             if set.contains(SyncSet::SEMI) && p == &TokenKind::Semicolon
                 || set.contains(SyncSet::RBRACE) && p == &TokenKind::RBrace
                 || set.contains(SyncSet::STMT) && p.starts_a_statement()
-                || set.contains(SyncSet::LBRACE) && p == &TokenKind::LBrace
             {
                 return;
             }
@@ -697,6 +793,5 @@ bitflags! {
         const SEMI = 1 << 0;
         const RBRACE = 1 << 1;
         const STMT = 1 << 2;
-        const LBRACE = 1 << 3;
     }
 }

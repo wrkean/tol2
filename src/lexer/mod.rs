@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
 use logos::Logos;
-use miette::NamedSource;
 
 use crate::{
     error::CompilerError,
@@ -29,7 +26,6 @@ impl Lexer {
                 Err(e) => {
                     errors.push(CompilerError::Lexer {
                         message: e.to_string(),
-                        // src: NamedSource::new(source_file_name, source_code),
                         span: e.span().into(),
                         help: e.help().map(|s| s.to_string()),
                     });

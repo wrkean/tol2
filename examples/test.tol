@@ -1,0 +1,20 @@
+dapat:
+    WIDTH: i32 = 5
+    HEIGHT: i32 = 10
+
+par una() -> i32:
+    kung WIDTH == 5 at WIDTH == 17:
+        HEIGHT = HEIGHT + 1
+    kungdi:
+        |hello|
+
+    sa 0..5:
+        i += 1
+
+    habang tama:
+        ang x, y: i32, i16 = 1, 3
+
+    kumpara 5:
+        kung 103 => expr,
+        kung 103 => 10,
+        wala 102 => 30,

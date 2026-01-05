@@ -57,6 +57,10 @@ pub enum TokenKind {
     Mali,
     #[token("ibalik")]
     Ibalik,
+    #[token("kung")]
+    Kung,
+    #[token("kungdi")]
+    Kungdi,
 
     // Operators
     #[token("+")]
@@ -134,8 +138,10 @@ impl TokenKind {
                 | TokenKind::Dapat
                 | TokenKind::Paraan
                 | TokenKind::Semicolon
+                | TokenKind::LBrace
                 | TokenKind::Sa
                 | TokenKind::Habang
+                | TokenKind::Kung
         )
     }
 

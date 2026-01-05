@@ -11,6 +11,7 @@ param = identifier , ":" , type
 parameter_list = param , { "," , param } , [ "," ] ;
 for_statement = "sa" , expression , [ "=>" , identifier ] , block ;
 while_statement = "habang" , expression , block ;
+kung_statement = "kung" , expression , block , [ { "kungdi" , expression , block } , "kungdi" , block ]
 expression = number
     | boolean
     | string | arithmetic

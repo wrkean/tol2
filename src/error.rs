@@ -51,6 +51,14 @@ pub enum CompilerError {
         #[label("Hindi ito pwede magumpisa ng pahayag")]
         span: SourceSpan,
     },
+
+    #[error("{}", "Walang kapares na delimiter".bright_red())]
+    UnmatchedDelimiter {
+        delimiter: String,
+
+        #[label("Walang kapares ang {}", delimiter)]
+        span: SourceSpan,
+    },
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]

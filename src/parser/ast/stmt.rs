@@ -55,6 +55,9 @@ pub enum StmtKind {
         cond: Expr,
         block: Box<Stmt>,
     },
+    Kung {
+        branches: Vec<KungBranch>,
+    },
     Block {
         stmts: Vec<Stmt>,
     },
@@ -68,4 +71,10 @@ pub enum StmtKind {
 pub struct ParamInfo {
     pub id: String,
     pub ttype: TolType,
+}
+
+#[derive(Debug)]
+pub struct KungBranch {
+    pub cond: Option<Expr>,
+    pub block: Stmt,
 }
