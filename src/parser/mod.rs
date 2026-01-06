@@ -513,7 +513,7 @@ impl Parser {
         while !self.is_at_eof() {
             let op = self.peek().clone();
             if left.is_lvalue() && op.kind == TokenKind::LBrace && ctx.can_have_struct_lit() {
-                return self.parse_struct_literal(left);
+                return Ok(self.parse_struct_literal(left));
             }
 
             if operators::get_infix_op(op.kind()).precedence() <= prec {
@@ -651,17 +651,43 @@ impl Parser {
         })
     }
 
-    fn parse_struct_literal(&mut self, left: Expr) -> Result<Expr, CompilerError> {
+    fn parse_struct_literal(&mut self, left: Expr) -> Expr {
         let start = left.span.start;
-        self.consume(TokenKind::LBrace, "`{`")?;
+        let Some(_) = self.consume_and_synchronize(
+            TokenKind::LBrace,
+            "`{` pagkatapos ng expresyon",
+            SyncSet::SEMI,
+        ) else {
+            return Expr::new_dummy();
+        };
+
         let mut fields = Vec::new();
 
         while !self.is_at_eof_or_delimiter(TokenKind::RBrace) {
-            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+            let Some(id) = self
+                .consume_and_synchronize(
+                    TokenKind::Identifier,
+                    "pangalan pagkatapos ng `{` o `,`",
+                    SyncSet::SEMI,
+                )
+                .clone()
+            else {
+                return Expr::new_dummy();
+            };
+
             let ex = if self.peek().kind == TokenKind::Colon {
                 self.advance();
 
-                Some(self.parse_expression(0, ExprParseContext::StructLiteralField)?)
+                Some(
+                    match self.parse_expression(0, ExprParseContext::StructLiteralField) {
+                        Ok(ex) => ex,
+                        Err(e) => {
+                            self.record(e);
+                            self.synchronize(SyncSet::SEMI);
+                            return Expr::new_dummy();
+                        }
+                    },
+                )
             } else {
                 None
             };
@@ -671,23 +697,27 @@ impl Parser {
             if self.peek().kind == TokenKind::Comma {
                 self.advance();
             } else if self.peek().kind != TokenKind::RBrace {
-                return Err(CompilerError::UnexpectedToken {
-                    expected: "Umasa ng `,` o `}`".to_string(),
+                self.record(CompilerError::UnexpectedToken {
+                    expected: format!("Umasa ng `}}` pero nakita ay {}", self.peek().lexeme()),
                     span: self.peek().span().into(),
                     help: None,
                 });
+                return Expr::new_dummy();
             }
         }
 
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::SEMI)
+        else {
+            return Expr::new_dummy();
+        };
 
-        Ok(Expr {
+        Expr {
             kind: ExprKind::StructLiteral {
                 left: Box::new(left),
                 fields,
             },
-            span: start..end,
-        })
+            span: start..end_tok.span.end,
+        }
     }
 
     fn record(&mut self, err: CompilerError) {
