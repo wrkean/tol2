@@ -39,7 +39,9 @@ pub enum CompilerError {
 
     #[error("{}", "Hindi inaasahang tipo".bright_red())]
     UnexpectedType {
-        #[label("Hindi ito tipo")]
+        found: String,
+
+        #[label("Umasa ng tipo pero nakita ay {found}")]
         span: SourceSpan,
 
         #[help]

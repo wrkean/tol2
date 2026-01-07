@@ -1,4 +1,4 @@
-paraan hello(): i32 {
+paraan hello() {
     ang x: i32 = 5;
-    ang st: i32 = Struct { x: 5 } ;
+    ang x: i32 = 4;
 }

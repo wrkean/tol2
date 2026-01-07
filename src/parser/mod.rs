@@ -45,7 +45,10 @@ impl Parser {
 
             match self.parse_statement() {
                 Ok(s) => ast.push(s),
-                Err(e) => self.errors.push(e),
+                Err(e) => {
+                    self.synchronize();
+                    self.record(e);
+                }
             };
         }
 
@@ -61,11 +64,11 @@ impl Parser {
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
         dbg!(self.peek().kind(), self.peek().lexeme());
         match self.peek().kind() {
-            TokenKind::Ang | TokenKind::Dapat => Ok(self.parse_angdapat()),
-            TokenKind::Paraan => Ok(self.parse_paraan()),
-            TokenKind::Sa => Ok(self.parse_sa()),
-            TokenKind::Habang => Ok(self.parse_habang()),
-            TokenKind::Kung => Ok(self.parse_kung()),
+            TokenKind::Ang | TokenKind::Dapat => self.parse_angdapat(),
+            TokenKind::Paraan => self.parse_paraan(),
+            TokenKind::Sa => self.parse_sa(),
+            TokenKind::Habang => self.parse_habang(),
+            TokenKind::Kung => self.parse_kung(),
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -73,164 +76,85 @@ impl Parser {
             TokenKind::LBrace => {
                 self.advance();
                 let block = self.parse_block();
-                let Some(_) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
-                else {
-                    return Ok(Stmt::new_dummy());
-                };
+                self.consume(TokenKind::RBrace, "`}`")?;
 
-                Ok(block)
+                block
             }
-            TokenKind::RParen | TokenKind::RBrace => {
-                let delimiter_tok = self.peek().clone();
-                self.advance();
-                self.record(CompilerError::UnmatchedDelimiter {
-                    delimiter: delimiter_tok.lexeme,
-                    span: delimiter_tok.span.into(),
-                });
-
-                Ok(Stmt::new_dummy())
-            }
-            _ => todo!(),
+            TokenKind::RBrace => Err(CompilerError::UnmatchedDelimiter {
+                delimiter: "`}`".to_string(),
+                span: self.peek().span().into(),
+            }),
+            _ => Err(CompilerError::InvalidStartOfStatement {
+                span: self.peek().span().into(),
+            }),
         }
     }
 
-    fn parse_angdapat(&mut self) -> Stmt {
-        let kind = match self.peek().kind() {
-            k @ (TokenKind::Ang | TokenKind::Dapat) => k.to_owned(),
-            _ => return Stmt::new_dummy(),
-        };
-        let Some(start_tok) =
-            self.consume_and_synchronize(kind, "`ang` o `dapat`", SyncSet::STMT | SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
+    fn parse_angdapat(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self
+            .consume_many(&[TokenKind::Ang, TokenKind::Dapat], "`ang` o `dapat`")?
+            .span
+            .start;
 
-        let Some(id) = self.consume_and_synchronize(
-            TokenKind::Identifier,
-            "pangalan pagkatapos ng `ang` o `dapat`",
-            SyncSet::STMT | SyncSet::RBRACE,
-        ) else {
-            return Stmt::new_dummy();
-        };
-        let Some(_) = self.consume_and_synchronize(
-            TokenKind::Colon,
-            "`:` pagkatapos ng pangalan",
-            SyncSet::STMT | SyncSet::RBRACE,
-        ) else {
-            return Stmt::new_dummy();
-        };
-        let ttype = match self.parse_type() {
-            Ok(t) => t,
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT | SyncSet::RBRACE);
-                return Stmt::new_dummy();
-            }
-        };
+        let id = self
+            .consume(
+                TokenKind::Identifier,
+                "pangalan pagkatapos ng `ang` o `dapat`",
+            )?
+            .clone();
+        self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+        let ttype = self.parse_type()?;
 
-        let Some(_) =
-            self.consume_and_synchronize(TokenKind::Equal, "`=`", SyncSet::STMT | SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
-        let rhs = match self.parse_expression(0, ExprParseContext::AngDapatStatement) {
-            Ok(ex) => ex,
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT | SyncSet::RBRACE);
-                return Stmt::new_dummy();
-            }
-        };
+        self.consume(TokenKind::Equal, "`=` pagkatapos ng tipo")?;
+        let rhs = self.parse_expression(0, ExprParseContext::AngDapatStatement)?;
+        let end = self
+            .consume(TokenKind::Semicolon, "`;` pagkatapos ng expresyon")?
+            .span
+            .end;
 
-        self.consume_and_synchronize(
-            TokenKind::Semicolon,
-            "`;` pagkatapos ng expresyon",
-            SyncSet::STMT | SyncSet::RBRACE,
-        );
-
-        Stmt {
+        Ok(Stmt {
             kind: StmtKind::Ang { id, ttype, rhs },
-            span: start_tok.span.start..self.previous().span.end,
-        }
+            span: start..end,
+        })
     }
 
-    fn parse_paraan(&mut self) -> Stmt {
-        let start = if let Some(paraan) =
-            self.consume_and_synchronize(TokenKind::Paraan, "`paraan`", SyncSet::STMT)
-        {
-            paraan.span.start
-        } else {
-            return Stmt::new_dummy();
-        };
+    fn parse_paraan(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Paraan, "`paraan`")?.span.start;
 
-        let Some(id) = self.consume_and_synchronize(
-            TokenKind::Identifier,
-            "pangalan pagkatapos ng `paraan`",
-            SyncSet::STMT,
-        ) else {
-            return Stmt::new_dummy();
-        };
+        let id = self
+            .consume(TokenKind::Identifier, "pangalan pagkatapos ng `paraan`")?
+            .clone();
+        self.consume(TokenKind::LParen, "`(` pagkatapos ng pangalan")?;
+        let params = self.parse_params()?;
+        self.consume(TokenKind::RParen, "`)`")?;
 
-        let Some(_) = self.consume_and_synchronize(
-            TokenKind::LParen,
-            "`(` pagkatapos ng pangalan",
-            SyncSet::STMT,
-        ) else {
-            return Stmt::new_dummy();
-        };
-        let params = match self.parse_params() {
-            Ok(params) => params,
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT);
-                return Stmt::new_dummy();
-            }
-        };
-        let Some(_) = self.consume_and_synchronize(TokenKind::RParen, "`)`", SyncSet::STMT) else {
-            return Stmt::new_dummy();
-        };
-
-        let return_type = if self.peek().kind == TokenKind::Colon {
-            self.advance();
-
-            match self.parse_type() {
-                Ok(ty) => ty,
-                Err(e) => {
-                    self.record(e);
-                    self.synchronize(SyncSet::RBRACE);
-                    return Stmt::new_dummy();
-                }
-            }
+        let return_type = if self.peek().kind.starts_a_type() {
+            self.parse_type()?
         } else {
             TolType::Void
         };
 
-        let Some(_) =
-            self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::STMT | SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
-        let block = self.parse_block();
-        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
-        else {
-            return Stmt::new_dummy();
-        };
+        self.consume(TokenKind::LBrace, "`{`")?;
+        let block = self.parse_block()?;
+        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
 
-        Stmt {
+        Ok(Stmt {
             kind: StmtKind::Paraan {
                 id,
                 return_type,
                 params,
                 block: Box::new(block),
             },
-            span: start..end_tok.span.end,
-        }
+            span: start..end,
+        })
     }
 
     fn parse_params(&mut self) -> Result<Vec<ParamInfo>, CompilerError> {
         let mut params = Vec::new();
         while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
-            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+            let id = self
+                .consume(TokenKind::Identifier, "pangalan ng parametro")?
+                .clone();
             self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
             let ttype = self.parse_type()?;
             params.push(ParamInfo {
@@ -245,7 +169,7 @@ impl Parser {
                     expected: "umasa ng `,`".to_string(),
                     span: self.peek().span().into(),
                     help: Some(
-                        "Mas mabuti kung lagyan mo ng `,` bago matapos ang listahan ng parametro"
+                        "Inirekomenda ko (gumawa ng compiler na to) na lagyan ng `,` sa pinakahuli ng mga parametro"
                             .to_string(),
                     ),
                 });
@@ -255,160 +179,76 @@ impl Parser {
         Ok(params)
     }
 
-    fn parse_sa(&mut self) -> Stmt {
-        let start = if let Some(sa_tok) =
-            self.consume_and_synchronize(TokenKind::Sa, "`sa`", SyncSet::STMT)
-        {
-            sa_tok.span.start
-        } else {
-            return Stmt::new_dummy();
-        };
+    fn parse_sa(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Sa, "`sa`")?.span.start;
 
-        let cond = match self.parse_expression(0, ExprParseContext::SaStatement) {
-            Ok(ex) => ex,
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT);
-                return Stmt::new_dummy();
-            }
-        };
-
+        let cond = self.parse_expression(0, ExprParseContext::SaStatement)?;
         let bind = if self.peek().kind == TokenKind::Arrow {
             self.advance();
-            let Some(t) = self.consume_and_synchronize(
-                TokenKind::Identifier,
-                "pangalan pagkatapos ng `=>`",
-                SyncSet::STMT,
-            ) else {
-                return Stmt::new_dummy();
-            };
-            Some(t)
+            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+
+            Some(id)
         } else {
             None
         };
 
-        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
-        let block = self.parse_block();
-        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
-        else {
-            return Stmt::new_dummy();
-        };
+        self.consume(TokenKind::LBrace, "`{`")?;
+        let block = self.parse_block()?;
+        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
 
-        Stmt {
+        Ok(Stmt {
             kind: StmtKind::Sa {
                 cond,
                 bind,
                 block: Box::new(block),
             },
-            span: start..end_tok.span.end,
-        }
+            span: start..end,
+        })
     }
 
-    fn parse_habang(&mut self) -> Stmt {
-        let Some(start_tok) =
-            self.consume_and_synchronize(TokenKind::Habang, "`habang`", SyncSet::STMT)
-        else {
-            return Stmt::new_dummy();
-        };
-        let cond = match self.parse_expression(0, ExprParseContext::HabangStatement) {
-            Ok(ex) => ex,
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT);
-                return Stmt::new_dummy();
-            }
-        };
-        let Some(_) = self.consume_and_synchronize(TokenKind::LBrace, "`{`", SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
-        let block = self.parse_block();
-        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT)
-        else {
-            return Stmt::new_dummy();
-        };
+    fn parse_habang(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Habang, "`habang`")?.span.start;
 
-        Stmt {
+        let cond = self.parse_expression(0, ExprParseContext::HabangStatement)?;
+
+        self.consume(TokenKind::LBrace, "`{`")?;
+        let block = self.parse_block()?;
+        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+
+        Ok(Stmt {
             kind: StmtKind::Habang {
                 cond,
                 block: Box::new(block),
             },
-            span: start_tok.span.start..end_tok.span.end,
-        }
+            span: start..end,
+        })
     }
 
-    fn parse_kung(&mut self) -> Stmt {
+    fn parse_kung(&mut self) -> Result<Stmt, CompilerError> {
         let mut branches = Vec::new();
-        let Some(start_tok) =
-            self.consume_and_synchronize(TokenKind::Kung, "`kung`", SyncSet::STMT)
-        else {
-            return Stmt::new_dummy();
-        };
+
+        let start = self.consume(TokenKind::Kung, "`kung`")?.span.start;
 
         // Parse initial `kung` statement
-        let cond = match self.parse_expression(0, ExprParseContext::KungStatement) {
-            Ok(ex) => Some(ex),
-            Err(e) => {
-                self.record(e);
-                self.synchronize(SyncSet::STMT);
-                return Stmt::new_dummy();
-            }
-        };
-        let Some(_) = self.consume_and_synchronize(
-            TokenKind::LBrace,
-            "`{` pagkatapos ng kondisyon",
-            SyncSet::STMT | SyncSet::RBRACE,
-        ) else {
-            return Stmt::new_dummy();
-        };
-        let block = self.parse_block();
-        let Some(_) =
-            self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::STMT | SyncSet::RBRACE)
-        else {
-            return Stmt::new_dummy();
-        };
-
+        let cond = Some(self.parse_expression(0, ExprParseContext::KungStatement)?);
+        self.consume(TokenKind::LBrace, "`{`")?;
+        let block = self.parse_block()?;
+        self.consume(TokenKind::RBrace, "`}`")?;
         branches.push(KungBranch { cond, block });
 
         // Parse following `kungdi` brannches
         let mut end = 0;
         while self.peek().kind == TokenKind::Kungdi {
-            let Some(_) =
-                self.consume_and_synchronize(TokenKind::Kungdi, "`kungdi`", SyncSet::STMT)
-            else {
-                return Stmt::new_dummy();
-            };
+            self.consume(TokenKind::Kungdi, "`kungdi`")?;
             let cond = if self.peek().kind != TokenKind::LBrace {
-                match self.parse_expression(0, ExprParseContext::KungStatement) {
-                    Ok(ex) => Some(ex),
-                    Err(e) => {
-                        self.record(e);
-                        self.synchronize(SyncSet::RBRACE | SyncSet::STMT);
-                        return Stmt::new_dummy();
-                    }
-                }
+                Some(self.parse_expression(0, ExprParseContext::KungStatement)?)
             } else {
                 None
             };
 
-            let Some(_) = self.consume_and_synchronize(
-                TokenKind::LBrace,
-                "`{` pagkatapos ng `kungdi` o expresyon",
-                SyncSet::STMT | SyncSet::RBRACE,
-            ) else {
-                return Stmt::new_dummy();
-            };
-            let block = self.parse_block();
-            let Some(_) = self.consume_and_synchronize(
-                TokenKind::RBrace,
-                "`}`",
-                SyncSet::STMT | SyncSet::RBRACE,
-            ) else {
-                return Stmt::new_dummy();
-            };
+            self.consume(TokenKind::LBrace, "`{`")?;
+            let block = self.parse_block()?;
+            self.consume(TokenKind::RBrace, "`}`")?;
 
             let block_end = block.span.end;
             let is_done = cond.is_none();
@@ -420,24 +260,33 @@ impl Parser {
             }
         }
 
-        Stmt {
+        Ok(Stmt {
             kind: StmtKind::Kung { branches },
-            span: start_tok.span.start..end,
-        }
+            span: start..end,
+        })
     }
 
-    fn parse_block(&mut self) -> Stmt {
+    fn parse_block(&mut self) -> Result<Stmt, CompilerError> {
         let mut stmts = Vec::new();
         let start = self.peek().span.start;
 
         while !self.is_at_eof() && self.peek().kind != TokenKind::RBrace {
-            stmts.push(self.parse_statement().unwrap());
+            let stmt = match self.parse_statement() {
+                Ok(s) => s,
+                Err(e) => {
+                    self.record(e);
+                    self.synchronize();
+                    continue;
+                }
+            };
+
+            stmts.push(stmt);
         }
 
-        Stmt {
+        Ok(Stmt {
             kind: StmtKind::Block { stmts },
             span: start..self.previous().span.end,
-        }
+        })
     }
 
     fn parse_type(&mut self) -> Result<TolType, CompilerError> {
@@ -501,6 +350,7 @@ impl Parser {
                 }
             },
             _ => Err(CompilerError::UnexpectedType {
+                found: self.peek().lexeme.clone(),
                 span: self.peek().span().into(),
                 help: None,
             }),
@@ -513,7 +363,7 @@ impl Parser {
         while !self.is_at_eof() {
             let op = self.peek().clone();
             if left.is_lvalue() && op.kind == TokenKind::LBrace && ctx.can_have_struct_lit() {
-                return Ok(self.parse_struct_literal(left));
+                return self.parse_struct_literal(left);
             }
 
             if operators::get_infix_op(op.kind()).precedence() <= prec {
@@ -651,43 +501,18 @@ impl Parser {
         })
     }
 
-    fn parse_struct_literal(&mut self, left: Expr) -> Expr {
-        let start = left.span.start;
-        let Some(_) = self.consume_and_synchronize(
-            TokenKind::LBrace,
-            "`{` pagkatapos ng expresyon",
-            SyncSet::SEMI,
-        ) else {
-            return Expr::new_dummy();
-        };
-
+    fn parse_struct_literal(&mut self, left: Expr) -> Result<Expr, CompilerError> {
         let mut fields = Vec::new();
 
-        while !self.is_at_eof_or_delimiter(TokenKind::RBrace) {
-            let Some(id) = self
-                .consume_and_synchronize(
-                    TokenKind::Identifier,
-                    "pangalan pagkatapos ng `{` o `,`",
-                    SyncSet::SEMI,
-                )
-                .clone()
-            else {
-                return Expr::new_dummy();
-            };
+        let start = left.span.start;
 
+        self.consume(TokenKind::LBrace, "`{`");
+        while !self.is_at_eof_or_delimiter(TokenKind::RBrace) {
+            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
             let ex = if self.peek().kind == TokenKind::Colon {
                 self.advance();
 
-                Some(
-                    match self.parse_expression(0, ExprParseContext::StructLiteralField) {
-                        Ok(ex) => ex,
-                        Err(e) => {
-                            self.record(e);
-                            self.synchronize(SyncSet::SEMI);
-                            return Expr::new_dummy();
-                        }
-                    },
-                )
+                Some(self.parse_expression(0, ExprParseContext::StructLiteralField)?)
             } else {
                 None
             };
@@ -697,41 +522,32 @@ impl Parser {
             if self.peek().kind == TokenKind::Comma {
                 self.advance();
             } else if self.peek().kind != TokenKind::RBrace {
-                self.record(CompilerError::UnexpectedToken {
+                return Err(CompilerError::UnexpectedToken {
                     expected: format!("Umasa ng `}}` pero nakita ay {}", self.peek().lexeme()),
                     span: self.peek().span().into(),
                     help: None,
                 });
-                return Expr::new_dummy();
             }
         }
 
-        let Some(end_tok) = self.consume_and_synchronize(TokenKind::RBrace, "`}`", SyncSet::SEMI)
-        else {
-            return Expr::new_dummy();
-        };
+        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
 
-        Expr {
+        Ok(Expr {
             kind: ExprKind::StructLiteral {
                 left: Box::new(left),
                 fields,
             },
-            span: start..end_tok.span.end,
-        }
+            span: start..end,
+        })
     }
 
     fn record(&mut self, err: CompilerError) {
         self.errors.push(err);
     }
 
-    fn synchronize(&mut self, set: SyncSet) {
+    fn synchronize(&mut self) {
         while !self.is_at_eof() {
-            let p = self.peek().kind();
-
-            if set.contains(SyncSet::SEMI) && p == &TokenKind::Semicolon
-                || set.contains(SyncSet::RBRACE) && p == &TokenKind::RBrace
-                || set.contains(SyncSet::STMT) && p.starts_a_statement()
-            {
+            if self.peek().kind.starts_a_statement() {
                 return;
             }
 
@@ -788,20 +604,30 @@ impl Parser {
         }
     }
 
-    fn consume_and_synchronize(
+    fn consume_many(
         &mut self,
-        expected: TokenKind,
+        kinds: &[TokenKind],
         expected_str: &str,
-        set: SyncSet,
-    ) -> Option<Token> {
-        match self.consume(expected, expected_str) {
-            Ok(t) => Some(t.to_owned()),
-            Err(e) => {
-                self.record(e);
-                self.synchronize(set);
-                None
+    ) -> Result<&Token, CompilerError> {
+        if self.is_at_end() {
+            panic!("Compiler bug: unexpected end of input")
+        }
+
+        for kind in kinds {
+            if self.peek().kind() == kind {
+                return Ok(self.advance());
             }
         }
+
+        Err(CompilerError::UnexpectedToken {
+            expected: format!(
+                "Umasa ng {} pero nakita ay `{}`",
+                expected_str,
+                self.peek().lexeme()
+            ),
+            span: self.peek().span().into(),
+            help: None,
+        })
     }
 
     fn is_at_end(&self) -> bool {
