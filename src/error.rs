@@ -58,7 +58,15 @@ pub enum CompilerError {
     UnmatchedDelimiter {
         delimiter: String,
 
-        #[label("Walang kapares ang {}", delimiter)]
+        #[label("Walang kapares ang {delimiter}")]
+        span: SourceSpan,
+    },
+
+    #[error("{}", "Walang kapares na bracket".bright_red())]
+    UnmatchedBracket {
+        bracket: char,
+
+        #[label("Walang kapares ang `{bracket}`")]
         span: SourceSpan,
     },
 }

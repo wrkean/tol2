@@ -30,13 +30,13 @@ impl<'com> Compiler<'com> {
 
         let (lexed_mod, mut errors) = Lexer::lex(source_code, source_file_name);
 
-        let mut parser = Parser::new(lexed_mod);
-        let mut parsed_mod = {
-            let (pmod, perrs) = parser.parse();
-            errors.extend(perrs);
-            pmod
-        };
-        println!("{:#?}", &parsed_mod.ast);
+        // let mut parser = Parser::new(lexed_mod);
+        // let mut parsed_mod = {
+        //     let (pmod, perrs) = parser.parse();
+        //     errors.extend(perrs);
+        //     pmod
+        // };
+        // println!("{:#?}", &parsed_mod.ast);
 
         if errors.is_empty() {
             Ok(())

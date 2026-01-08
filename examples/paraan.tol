@@ -1,4 +1,3 @@
-paraan hello() {
-    ang x: i32 = 5;
-    ang x: i32 = 4;
-}
+paraan hello((({{{{}}):
+    ang x: i32 = 5
+    ang x: i32 = 4
