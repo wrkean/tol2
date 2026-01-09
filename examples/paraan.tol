@@ -1,3 +1,4 @@
-paraan hello((({{{{}}):
-    ang x: i32 = 5
-    ang x: i32 = 4
+paraan hello() i32 {
+    ang x: i32 = 1;
+    ang y: i32 = 2;
+}

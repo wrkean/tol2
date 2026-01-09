@@ -36,7 +36,7 @@ impl Token {
 }
 
 #[derive(Logos, Debug, PartialEq, Clone)]
-#[logos(skip(r"[ \t\f\r]+"))]
+#[logos(skip(r"[ \t\f\r\n]+"))]
 #[logos(utf8 = true)]
 #[logos(error(LexingError, LexingError::invalid_char))]
 #[logos(extras = LexerState)]
@@ -112,8 +112,6 @@ pub enum TokenKind {
     Colon,
     #[token(";")]
     Semicolon,
-    #[regex("\n+", TokenKind::handle_newline)]
-    Newline,
 
     // Literals
     #[regex(r"[0-9]([0-9_]*[0-9])?")]
@@ -157,16 +155,6 @@ impl TokenKind {
 
     pub fn starts_a_type(&self) -> bool {
         matches!(self, TokenKind::Identifier)
-    }
-
-    pub fn handle_newline(lexer: &mut logos::Lexer<Self>) -> logos::Filter<()> {
-        use logos::Filter;
-
-        if lexer.extras.bracket_stack.is_empty() {
-            Filter::Emit(())
-        } else {
-            Filter::Skip
-        }
     }
 }
 

@@ -62,7 +62,6 @@ impl Parser {
     }
 
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
-        dbg!(self.peek().kind(), self.peek().lexeme());
         match self.peek().kind() {
             TokenKind::Ang | TokenKind::Dapat => self.parse_angdapat(),
             TokenKind::Paraan => self.parse_paraan(),
@@ -506,13 +505,29 @@ impl Parser {
 
         let start = left.span.start;
 
-        self.consume(TokenKind::LBrace, "`{`");
+        self.consume(TokenKind::LBrace, "`{`")?;
         while !self.is_at_eof_or_delimiter(TokenKind::RBrace) {
-            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+            let id = match self.consume(TokenKind::Identifier, "pangalan") {
+                Ok(t) => t.to_owned(),
+                Err(e) => {
+                    self.record(e);
+                    self.synchronize_until(|tk| matches!(tk, TokenKind::RBrace));
+                    continue;
+                }
+            };
             let ex = if self.peek().kind == TokenKind::Colon {
                 self.advance();
 
-                Some(self.parse_expression(0, ExprParseContext::StructLiteralField)?)
+                Some(
+                    match self.parse_expression(0, ExprParseContext::StructLiteralField) {
+                        Ok(ex) => ex,
+                        Err(e) => {
+                            self.record(e);
+                            self.synchronize_until(|tk| matches!(tk, TokenKind::RBrace));
+                            continue;
+                        }
+                    },
+                )
             } else {
                 None
             };
@@ -548,6 +563,17 @@ impl Parser {
     fn synchronize(&mut self) {
         while !self.is_at_eof() {
             if self.peek().kind.starts_a_statement() {
+                return;
+            }
+
+            self.advance();
+        }
+    }
+
+    /// Synchronizes until the predicate is true. Predicate performs on the current token
+    fn synchronize_until(&mut self, predicate: fn(&TokenKind) -> bool) {
+        while !self.is_at_eof() {
+            if predicate(self.peek().kind()) {
                 return;
             }
 
