@@ -1,6 +1,6 @@
 use std::{fmt, ops::Range};
 
-use crate::toltype::TolType;
+use crate::{parser::ast::stmt::ParamInfo, toltype::TolType};
 
 #[derive(Debug, Clone)]
 pub enum SymbolKind {
@@ -8,7 +8,7 @@ pub enum SymbolKind {
         ttype: TolType,
     },
     Paraan {
-        params_types: Vec<TolType>,
+        params: Vec<ParamInfo>,
         params_span: Range<usize>,
         return_type: TolType,
     },

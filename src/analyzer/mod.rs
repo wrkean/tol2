@@ -12,7 +12,7 @@ use crate::{
     parser::ast::{
         Ast,
         expr::{Expr, ExprKind},
-        stmt::{Stmt, StmtKind},
+        stmt::{ParamInfo, Stmt, StmtKind},
     },
     toltype::TolType,
 };
@@ -50,17 +50,59 @@ impl SemanticAnalyzer {
 
     fn analyze_statement(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
         match &stmt.kind {
-            StmtKind::Paraan { .. } => todo!(),
+            StmtKind::Paraan { .. } => self.analyze_paraan(stmt),
             StmtKind::Ang { .. } => self.analyze_ang(stmt),
-            StmtKind::Dapat { id, ttype, rhs } => todo!(),
-            StmtKind::Ibalik { id } => todo!(),
-            StmtKind::Sa { cond, bind, block } => todo!(),
-            StmtKind::Habang { cond, block } => todo!(),
-            StmtKind::Kung { branches } => todo!(),
-            StmtKind::Block { stmts } => todo!(),
-            StmtKind::Null => todo!(),
+            StmtKind::Dapat { .. } => todo!(),
+            StmtKind::Ibalik { .. } => todo!(),
+            StmtKind::Sa { .. } => todo!(),
+            StmtKind::Habang { .. } => todo!(),
+            StmtKind::Kung { .. } => todo!(),
+            StmtKind::Block { .. } => self.analyze_block(stmt),
+            StmtKind::Null => Ok(()),
             StmtKind::Dummy => todo!(),
         }
+    }
+
+    fn analyze_paraan(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
+        let StmtKind::Paraan {
+            id,
+            return_type,
+            params,
+            block,
+            params_span,
+        } = &mut stmt.kind
+        else {
+            unreachable!()
+        };
+
+        *return_type = self.resolve_type(return_type)?;
+
+        self.declare_symbol(
+            id.lexeme(),
+            SymbolKind::Paraan {
+                params: params.clone(),
+                params_span: params_span.to_owned(),
+                return_type: return_type.clone(),
+            },
+            id.span(),
+        )?;
+
+        self.enter_scope();
+        for param in params {
+            param.ttype = self.resolve_type(&param.ttype)?;
+
+            self.declare_symbol(
+                param.id.lexeme(),
+                SymbolKind::Var {
+                    ttype: param.ttype.clone(),
+                },
+                param.span.clone(),
+            )?;
+        }
+        self.analyze_block(block)?;
+        self.exit_scope();
+
+        Ok(())
     }
 
     fn analyze_ang(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
@@ -80,6 +122,20 @@ impl SemanticAnalyzer {
             },
             stmt.span.clone(),
         )?;
+
+        Ok(())
+    }
+
+    fn analyze_block(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
+        let StmtKind::Block { stmts } = &mut stmt.kind else {
+            unreachable!()
+        };
+
+        self.enter_scope();
+        for stmt in stmts {
+            self.analyze_statement(stmt)?;
+        }
+        self.exit_scope();
 
         Ok(())
     }
@@ -117,7 +173,7 @@ impl SemanticAnalyzer {
                 args_span,
                 ..
             } => return self.analyze_fncall(callee, args, args_span.to_owned()),
-            ExprKind::StructLiteral { left, fields } => todo!(),
+            ExprKind::StructLiteral { .. } => todo!(),
             ExprKind::Dummy => todo!(),
         };
 
@@ -193,39 +249,36 @@ impl SemanticAnalyzer {
         let kind = sym.kind().to_owned();
         match kind {
             SymbolKind::Paraan {
-                params_types,
+                params,
                 params_span,
                 return_type,
             } => {
-                self.check_call(&params_types, args, params_span, args_span)?;
+                self.check_call(&params, args, params_span, args_span)?;
                 Ok(return_type.to_owned())
             }
-            SymbolKind::Var { .. } => {
-                return Err(CompilerError::InvalidExpression {
-                    spans: vec![
-                        LabeledSpan::new(
-                            Some("Naideklara dito".to_string()),
-                            callee.span().start,
-                            callee.span().end - callee.span().start,
+            SymbolKind::Var { .. } => Err(CompilerError::InvalidExpression {
+                spans: vec![
+                    LabeledSpan::new(
+                        Some("Naideklara dito".to_string()),
+                        callee.span().start,
+                        callee.span().end - callee.span().start,
+                    ),
+                    LabeledSpan::new(
+                        Some(
+                            "Ito ay isang variable/constant, hindi ito pwedeng tawagin".to_string(),
                         ),
-                        LabeledSpan::new(
-                            Some(
-                                "Ito ay isang variable/constant, hindi ito pwedeng tawagin"
-                                    .to_string(),
-                            ),
-                            sym.span().start,
-                            sym.span().end - sym.span().start,
-                        ),
-                    ],
-                    help: None,
-                });
-            }
+                        sym.span().start,
+                        sym.span().end - sym.span().start,
+                    ),
+                ],
+                help: None,
+            }),
         }
     }
 
     fn check_call(
         &mut self,
-        param_types: &[TolType],
+        param_types: &[ParamInfo],
         args: &mut [Expr],
         params_span: Range<usize>,
         args_span: Range<usize>,
@@ -256,7 +309,25 @@ impl SemanticAnalyzer {
         for (arg, param) in args.iter_mut().zip(param_types) {
             let arg_type = self.analyze_expresion(arg)?;
 
-            param.coerce_or_mismatch(&arg_type, params_span.clone(), arg.span())?;
+            param
+                .ttype
+                .coerce(&arg_type)
+                .ok_or(CompilerError::TypeMismatch {
+                    lhs_type: param.ttype.to_string(),
+                    rhs_type: arg_type.to_string(),
+                    spans: vec![
+                        LabeledSpan::new(
+                            Some(format!("Ang parametro ay idineklarang `{}`", param.ttype)),
+                            param.span.start,
+                            param.span.end - param.span.start,
+                        ),
+                        LabeledSpan::new(
+                            Some(format!("Ngunit ito ay `{}`", arg_type)),
+                            arg.span.start,
+                            arg.span.end - arg.span.start,
+                        ),
+                    ],
+                })?;
         }
 
         Ok(())
@@ -297,15 +368,22 @@ impl SemanticAnalyzer {
 
     fn lookup_symbol(&self, name: &str, span: Range<usize>) -> Result<&Symbol, CompilerError> {
         for scope in self.symbol_table.iter().rev() {
-            match scope.get(name) {
-                Some(sym) => return Ok(sym),
-                None => {}
+            if let Some(s) = scope.get(name) {
+                return Ok(s);
             }
         }
 
         Err(CompilerError::UndeclaredSymbol {
-            message: format!("Hindi mahanap ang `{}`", name),
+            message: format!("Hindi naideklara ang `{}`", name),
             span: span.into(),
         })
+    }
+
+    fn enter_scope(&mut self) {
+        self.symbol_table.push(HashMap::new());
+    }
+
+    fn exit_scope(&mut self) {
+        let _ = self.symbol_table.pop();
     }
 }

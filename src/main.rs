@@ -1,4 +1,5 @@
 use clap::Parser;
+use colored::Colorize;
 use tol2::driver::{CompilerOptions, compile};
 
 fn main() {
@@ -9,7 +10,12 @@ fn main() {
         for e in ewos.errors {
             match ewos.source_code.as_ref() {
                 Some(src) => {
-                    eprintln!("{:?}", miette::Report::new(e).with_source_code(src.clone()))
+                    eprintln!(
+                        "{}",
+                        "========================================================================"
+                            .bright_cyan()
+                    );
+                    eprintln!("{:?}", miette::Report::new(e).with_source_code(src.clone()));
                 }
                 None => eprintln!("{:?}", miette::Report::new(e)),
             }

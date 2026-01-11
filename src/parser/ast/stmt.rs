@@ -34,6 +34,7 @@ pub enum StmtKind {
         id: Token,
         return_type: TolType,
         params: Vec<ParamInfo>,
+        params_span: Range<usize>,
         block: Box<Stmt>,
     },
     Ang {
@@ -73,8 +74,9 @@ pub enum StmtKind {
 
 #[derive(Debug, Clone)]
 pub struct ParamInfo {
-    pub id: String,
+    pub id: Token,
     pub ttype: TolType,
+    pub span: Range<usize>,
 }
 
 #[derive(Debug)]

@@ -127,9 +127,12 @@ impl Parser {
         let id = self
             .consume(TokenKind::Identifier, "pangalan pagkatapos ng `paraan`")?
             .clone();
-        self.consume(TokenKind::LParen, "`(` pagkatapos ng pangalan")?;
+        let param_start = self
+            .consume(TokenKind::LParen, "`(` pagkatapos ng pangalan")?
+            .span
+            .start;
         let params = self.parse_params()?;
-        self.consume(TokenKind::RParen, "`)`")?;
+        let param_end = self.consume(TokenKind::RParen, "`)`")?.span.end;
 
         let return_type = if self.peek().kind.starts_a_type() {
             self.parse_type()?
@@ -147,6 +150,7 @@ impl Parser {
                 return_type,
                 params,
                 block: Box::new(block),
+                params_span: param_start..param_end,
             },
             span: start..end,
         })
@@ -155,14 +159,16 @@ impl Parser {
     fn parse_params(&mut self) -> Result<Vec<ParamInfo>, CompilerError> {
         let mut params = Vec::new();
         while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
+            let param_start = self.peek().span.start;
             let id = self
                 .consume(TokenKind::Identifier, "pangalan ng parametro")?
                 .clone();
             self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
             let ttype = self.parse_type()?;
             params.push(ParamInfo {
-                id: id.lexeme,
+                id,
                 ttype,
+                span: param_start..self.previous().span.end,
             });
 
             if self.peek().kind == TokenKind::Comma {
@@ -278,7 +284,9 @@ impl Parser {
                 Ok(s) => s,
                 Err(e) => {
                     self.record(e);
-                    self.synchronize();
+                    self.synchronize_until(|tk| {
+                        tk.starts_a_statement() || tk == &TokenKind::RBrace
+                    });
                     continue;
                 }
             };
@@ -334,6 +342,14 @@ impl Parser {
                 "isize" => {
                     self.advance();
                     Ok(TolType::ISize)
+                }
+                "f32" => {
+                    self.advance();
+                    Ok(TolType::F32)
+                }
+                "f64" => {
+                    self.advance();
+                    Ok(TolType::F64)
                 }
                 "byte" => {
                     self.advance();
@@ -485,7 +501,7 @@ impl Parser {
             } else if self.peek().kind != TokenKind::RParen {
                 return Err(CompilerError::UnexpectedToken {
                     expected: "umasa ng `,` o `)`".to_string(),
-                    span: (start..self.peek().span.end).into(),
+                    span: self.peek().span().into(),
                     help: Some(
                         "mas maganda kung lagyan mo ng `,` sa pinakahuling argumento".to_string(),
                     ),

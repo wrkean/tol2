@@ -1,13 +1,7 @@
-ang x: i32 = 5;
-ang y: i32 = 5 + 5 + x;
+paraan ano(x: f64, y: i32) i32 {
+    ang x: i32 = 5;
+    ang y: i32 = ano(53.3, z);
+}
 
-
-
-
-
-
-
-
-
-ang z: bool = y + x;
-ang x: i32 = 5;
+ang y: i32 = ano(5);
+ang z: f64 = y;

@@ -1,5 +1,7 @@
 use std::{fmt, ops::Range};
 
+use miette::LabeledSpan;
+
 use crate::error::CompilerError;
 
 /// Holds the primitves and user-defined types
@@ -60,11 +62,10 @@ impl TolType {
             (U16, U64) | (U64, U16) => Some(U64),
             (U32, U64) | (U64, U32) => Some(U64),
 
-            // int -> float
-            (I8 | I16 | I32, F32) | (F32, I8 | I16 | I32) => Some(F32),
-
-            (I8 | I16 | I32 | I64, F64) | (F64, I8 | I16 | I32 | I64) => Some(F64),
-
+            // // int -> float
+            // (I8 | I16 | I32, F32) | (F32, I8 | I16 | I32) => Some(F32),
+            //
+            // (I8 | I16 | I32 | I64, F64) | (F64, I8 | I16 | I32 | I64) => Some(F64),
             (F32, F64) | (F64, F32) => Some(F64),
 
             // unsized integer
@@ -96,8 +97,18 @@ impl TolType {
         self.coerce(other).ok_or(CompilerError::TypeMismatch {
             lhs_type: self.to_string(),
             rhs_type: other.to_string(),
-            lhs_span: self_span.into(),
-            rhs_span: other_span.into(),
+            spans: vec![
+                LabeledSpan::new(
+                    Some(format!("Ito ay `{}`", self)),
+                    self_span.start,
+                    self_span.end - self_span.start,
+                ),
+                LabeledSpan::new(
+                    Some(format!("Ito ay `{}`", other)),
+                    other_span.start,
+                    other_span.end - other_span.start,
+                ),
+            ],
         })
     }
 
@@ -120,6 +131,31 @@ impl TolType {
                 | TolType::UnsizedFloat
         )
     }
+    //
+    // pub fn is_integer(&self) -> bool {
+    //     matches!(
+    //         self,
+    //         TolType::U8
+    //             | TolType::U16
+    //             | TolType::U32
+    //             | TolType::U64
+    //             | TolType::USize
+    //             | TolType::I8
+    //             | TolType::I16
+    //             | TolType::I32
+    //             | TolType::I64
+    //             | TolType::ISize
+    //             | TolType::UnsizedInteger
+    //     )
+    // }
+    //
+    // pub fn is_float(&self) -> bool {
+    //     matches!(self, TolType::F32 | TolType::F64 | TolType::UnsizedFloat)
+    // }
+    //
+    // pub fn is_numeric_conflict(&self, other: &TolType) -> bool {
+    //     (self.is_integer() && other.is_float()) || (self.is_float() && other.is_integer())
+    // }
 }
 
 impl fmt::Display for TolType {
@@ -146,29 +182,6 @@ impl fmt::Display for TolType {
 
             TolType::UnsizedInteger => write!(f, "UnsizedInteger"),
             TolType::UnsizedFloat => write!(f, "UnsizedFloat"),
-            _ => panic!("Unrecognized string -> toltype!"),
-        }
-    }
-}
-
-impl From<&str> for TolType {
-    fn from(value: &str) -> Self {
-        match value {
-            "u8" => TolType::U8,
-            "u16" => TolType::U16,
-            "u32" => TolType::U32,
-            "u64" => TolType::U64,
-            "usize" => TolType::USize,
-
-            "i8" => TolType::I8,
-            "i16" => TolType::I16,
-            "i32" => TolType::I32,
-            "i64" => TolType::I64,
-            "isize" => TolType::ISize,
-
-            "byte" => TolType::Byte,
-            "char" => TolType::Char,
-            "bool" => TolType::Bool,
             _ => panic!("Unrecognized string -> toltype!"),
         }
     }

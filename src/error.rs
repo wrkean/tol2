@@ -92,23 +92,21 @@ pub enum CompilerError {
 
     #[error("{}", "Bawal na expresyon".bright_red())]
     InvalidExpression {
+        #[label(collection)]
         spans: Vec<LabeledSpan>,
 
         #[help]
         help: Option<String>,
     },
 
-    #[error("{}: `{lhs_type}` at `{rhs_type}`", "Mismatch ng tipo".bright_red())]
+    #[error("{} Hindi pwede ang `{lhs_type}` at `{rhs_type}`", "Mismatch ng tipo:".bright_red())]
     #[help("Subukang gamitin ang `gawing` (halimbawa: `<expresyon> gawing <tipo>`)")]
     TypeMismatch {
         lhs_type: String,
         rhs_type: String,
 
-        #[label("Ito ay `{lhs_type}`")]
-        lhs_span: SourceSpan,
-
-        #[label("Ito ay `{rhs_type}`")]
-        rhs_span: SourceSpan,
+        #[label(collection)]
+        spans: Vec<LabeledSpan>, // Spans indicate the mismatched types
     },
 }
 

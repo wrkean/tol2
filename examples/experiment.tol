@@ -1,5 +1,3 @@
-@![madali]
-
 paraan hello() babalik i32:
     ang x na i32 = 2
     dapat x na i32 = 3
@@ -12,9 +10,12 @@ uri Hayop:
     y na i32
     z na i32
 
--- mga paraan ng Tao:
+-- ilahad ang Tao:
 --    paraan bago() babalik Sarili:
---        ibalik Sarili(5, 12)
+--        ibalik Sarili {
+--            y: 5,
+--            z: 7,
+--        }
 --
 --    paraan edad(&sarili) babalik ng i32:
 --        ibalik sarili.y
@@ -28,4 +29,4 @@ ugali ng Tao ang Nagsasalita:
 
 ugali ng Hayop ang Nagsasalita:
     paraan salita(&sarili)
-        @sa_stdout($"Ako ay isang tao, may {sarili.z} na taong gulang")
+        @sa_stdout($"Ako ay isang hayop, may {sarili.z} na taong gulang")
