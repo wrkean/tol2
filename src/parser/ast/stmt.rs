@@ -22,6 +22,10 @@ impl Stmt {
             span: 0..0,
         }
     }
+
+    pub fn span(&self) -> Range<usize> {
+        self.span.clone()
+    }
 }
 
 #[derive(Debug)]
@@ -67,7 +71,7 @@ pub enum StmtKind {
     Dummy,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParamInfo {
     pub id: String,
     pub ttype: TolType,

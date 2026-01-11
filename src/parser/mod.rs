@@ -90,11 +90,11 @@ impl Parser {
     }
 
     fn parse_angdapat(&mut self) -> Result<Stmt, CompilerError> {
-        let start = self
-            .consume_many(&[TokenKind::Ang, TokenKind::Dapat], "`ang` o `dapat`")?
-            .span
-            .start;
+        let (start, kind) = {
+            let tok = self.consume_many(&[TokenKind::Ang, TokenKind::Dapat], "`ang` o `dapat`")?;
 
+            (tok.span.start, tok.kind.clone())
+        };
         let id = self
             .consume(
                 TokenKind::Identifier,
@@ -112,7 +112,11 @@ impl Parser {
             .end;
 
         Ok(Stmt {
-            kind: StmtKind::Ang { id, ttype, rhs },
+            kind: match kind {
+                TokenKind::Ang => StmtKind::Ang { id, ttype, rhs },
+                TokenKind::Dapat => StmtKind::Dapat { id, ttype, rhs },
+                _ => unreachable!(),
+            },
             span: start..end,
         })
     }
@@ -464,14 +468,14 @@ impl Parser {
             TokenKind::LessEqual => {
                 make_expr(left, |l, r| ExprKind::LessEqual { left: l, right: r })
             }
-            TokenKind::LParen => self.parse_fncall(left),
+            TokenKind::LParen => self.parse_fncall(left, op.span.start),
             _ => todo!(),
         }
     }
 
-    fn parse_fncall(&mut self, callee: Expr) -> Result<Expr, CompilerError> {
+    fn parse_fncall(&mut self, callee: Expr, args_start: usize) -> Result<Expr, CompilerError> {
         let mut args = Vec::new();
-        let start = self.peek().span.start;
+        let start = callee.span.start;
 
         while !self.is_at_eof() && self.peek().kind != TokenKind::RParen {
             args.push(self.parse_expression(0, ExprParseContext::Argument)?);
@@ -489,12 +493,13 @@ impl Parser {
             }
         }
 
-        self.consume(TokenKind::RParen, "`)`")?;
+        let args_end = self.consume(TokenKind::RParen, "`)`")?.span.end;
 
         Ok(Expr {
             kind: ExprKind::FnCall {
                 callee: Box::new(callee),
                 args,
+                args_span: args_start..args_end,
             },
             span: start..self.peek().span.end,
         })

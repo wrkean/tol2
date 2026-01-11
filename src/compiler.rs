@@ -1,5 +1,5 @@
 use crate::{
-    driver::CompilerOptions, error::CompilerError, lexer::Lexer,
+    analyzer::SemanticAnalyzer, driver::CompilerOptions, error::CompilerError, lexer::Lexer,
     module::module_registry::ModuleRegistry, parser::Parser,
 };
 use std::path::Path;
@@ -36,6 +36,11 @@ impl<'com> Compiler<'com> {
             errors.extend(perrs);
             pmod
         };
+
+        let mut analyzer = SemanticAnalyzer::new(parsed_mod);
+        analyzer.analyze();
+        errors.extend(analyzer.errors);
+        dbg!(&analyzer.symbol_table);
 
         if errors.is_empty() {
             Ok(())

@@ -1,7 +1,7 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
 use colored::Colorize;
-use miette::{Diagnostic, NamedSource, SourceSpan};
+use miette::{Diagnostic, LabeledSpan, SourceSpan};
 use thiserror::Error;
 
 use crate::lexer::token::TokenKind;
@@ -68,6 +68,47 @@ pub enum CompilerError {
 
         #[label("Walang kapares ang `{bracket}`")]
         span: SourceSpan,
+    },
+
+    #[error("{}", "Hindi naideklarang pangalan".bright_red())]
+    UndeclaredSymbol {
+        message: String,
+
+        #[label("{message}")]
+        span: SourceSpan,
+    },
+
+    #[error("{}", "Pagdeklara ulit ng kaparehong pangalan sa kaparehong sakop".bright_red())]
+    Redeclaration {
+        declared_message: String,
+        redeclared_message: String,
+
+        #[label("{declared_message}")]
+        declared_span: SourceSpan,
+
+        #[label("{redeclared_message}")]
+        redeclared_span: SourceSpan,
+    },
+
+    #[error("{}", "Bawal na expresyon".bright_red())]
+    InvalidExpression {
+        spans: Vec<LabeledSpan>,
+
+        #[help]
+        help: Option<String>,
+    },
+
+    #[error("{}: `{lhs_type}` at `{rhs_type}`", "Mismatch ng tipo".bright_red())]
+    #[help("Subukang gamitin ang `gawing` (halimbawa: `<expresyon> gawing <tipo>`)")]
+    TypeMismatch {
+        lhs_type: String,
+        rhs_type: String,
+
+        #[label("Ito ay `{lhs_type}`")]
+        lhs_span: SourceSpan,
+
+        #[label("Ito ay `{rhs_type}`")]
+        rhs_span: SourceSpan,
     },
 }
 

@@ -1,4 +1,13 @@
-paraan hello() i32 {
-    ang x: i32 = 1;
-    ang y: i32 = 2;
-}
+ang x: i32 = 5;
+ang y: i32 = 5 + 5 + x;
+
+
+
+
+
+
+
+
+
+ang z: bool = y + x;
+ang x: i32 = 5;

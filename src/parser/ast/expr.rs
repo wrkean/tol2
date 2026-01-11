@@ -63,6 +63,7 @@ pub enum ExprKind {
     FnCall {
         callee: Box<Expr>,
         args: Vec<Expr>,
+        args_span: Range<usize>,
     },
     StructLiteral {
         left: Box<Expr>,
@@ -89,6 +90,10 @@ impl Expr {
     pub fn is_lvalue(&self) -> bool {
         matches!(&self.kind, ExprKind::Identifier { .. })
     }
+
+    pub fn span(&self) -> Range<usize> {
+        self.span.clone()
+    }
 }
 
 // Made to be easier for ast to be tested
@@ -109,7 +114,7 @@ impl fmt::Display for Expr {
             ExprKind::Less { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::GreaterEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::LessEqual { left, right } => write!(f, "(!= {} {})", left, right),
-            ExprKind::FnCall { callee, args } => write!(f, "{}({:#?})", callee, args),
+            ExprKind::FnCall { callee, args, .. } => write!(f, "{}({:#?})", callee, args),
             ExprKind::Dummy => write!(f, "<dummy>"),
             ExprKind::StructLiteral { left, fields } => write!(f, "{} {{ {:#?} }}", left, fields),
         }
