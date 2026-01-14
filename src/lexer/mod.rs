@@ -195,7 +195,11 @@ impl<'a> Lexer<'a> {
             '\n' => {
                 self.is_at_start = true;
                 if !self.is_inside_bracket() {
-                    self.infer_semicolon();
+                    let last_token = self.tokens.last().unwrap();
+
+                    if last_token.kind.is_semicolon_inferrable() {
+                        self.add_token(TokenKind::Semicolon, Some(";"));
+                    }
                 }
             }
             _ => {
@@ -436,14 +440,6 @@ impl<'a> Lexer<'a> {
             })
         } else {
             Ok(())
-        }
-    }
-
-    fn infer_semicolon(&mut self) {
-        let last_token = self.tokens.last().expect("Whaaattt");
-
-        if last_token.kind.is_semicolon_inferrable() {
-            self.add_token(TokenKind::Semicolon, Some(";"));
         }
     }
 

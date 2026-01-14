@@ -1,5 +1,2 @@
-paraan hello(x na i32,
-        y na i32) babalik i32:
-    bawat x sa iterator:
-        gagawin
+paraan hello(x na i32, y na i32) babalik i32:
     gagawin
