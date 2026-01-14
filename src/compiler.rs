@@ -4,21 +4,35 @@ use crate::{
 };
 use std::path::Path;
 
+#[derive(Default)]
+pub struct CompilerCtx {
+    pub errors: Vec<CompilerError>,
+}
+
+impl CompilerCtx {
+    pub fn add_error(&mut self, error: CompilerError) {
+        self.errors.push(error);
+    }
+
+    pub fn extend_errors(&mut self, iter: impl IntoIterator<Item = CompilerError>) {
+        self.errors.extend(iter);
+    }
+}
+
 pub struct Compiler<'com> {
-    module_registry: ModuleRegistry<'com>,
     opts: CompilerOptions,
+    module_registry: ModuleRegistry<'com>,
 }
 
 impl<'com> Compiler<'com> {
     pub fn new(opts: CompilerOptions) -> Self {
         Self {
-            module_registry: ModuleRegistry::new(),
-
             opts,
+            module_registry: ModuleRegistry::new(),
         }
     }
 
-    pub fn run(&self, source_code: &str) -> Result<(), Vec<CompilerError>> {
+    pub fn run(&mut self, source_code: &'com str) -> CompilerCtx {
         // WARN: Have better handling for this
         let source_file_name = self
             .opts
@@ -28,25 +42,22 @@ impl<'com> Compiler<'com> {
             .to_str()
             .unwrap();
 
-        let (lexed_mod, mut errors) = Lexer::lex(source_code, source_file_name);
+        let mut ctx = CompilerCtx::default();
 
-        let mut parser = Parser::new(lexed_mod);
-        let mut parsed_mod = {
-            let (pmod, perrs) = parser.parse();
-            errors.extend(perrs);
-            pmod
-        };
+        let lexer = Lexer::new(source_code, source_file_name);
+        let tokens = lexer.lex(&mut ctx);
 
-        let mut analyzer = SemanticAnalyzer::new(parsed_mod);
-        analyzer.analyze();
-        errors.extend(analyzer.errors);
-        dbg!(&analyzer.symbol_table);
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
+        for tok in tokens.iter() {
+            println!("{} <=> {:?}", tok.lexeme(), tok.kind());
         }
+
+        let parser = Parser::new(&tokens);
+        let ast = parser.parse(&mut ctx);
+
+        let analyzer = SemanticAnalyzer::new(ast);
+        analyzer.analyze(&mut ctx);
+
+        ctx
     }
 
     pub fn load_stdlib(&mut self, _stdlib_path: &Path) {

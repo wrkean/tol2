@@ -7,8 +7,8 @@ use miette::LabeledSpan;
 
 use crate::{
     analyzer::symbol::{Symbol, SymbolKind},
+    compiler::CompilerCtx,
     error::CompilerError,
-    module::parsed_module::ParsedModule,
     parser::ast::{
         Ast,
         expr::{Expr, ExprKind},
@@ -21,27 +21,24 @@ mod symbol;
 
 pub struct SemanticAnalyzer {
     pub ast: Ast,
-    pub src_filename: String,
     pub errors: Vec<CompilerError>,
     pub symbol_table: Vec<HashMap<String, Symbol>>,
 }
 
 impl SemanticAnalyzer {
-    pub fn new(parsed_mod: ParsedModule) -> Self {
+    pub fn new(ast: Ast) -> Self {
         Self {
-            ast: parsed_mod.ast,
-            src_filename: parsed_mod.src_filename,
+            ast,
             errors: Vec::new(),
             symbol_table: vec![HashMap::new()],
         }
     }
 
-    pub fn analyze(&mut self) {
+    pub fn analyze(mut self, ctx: &mut CompilerCtx) {
         let mut statements = std::mem::take(&mut self.ast);
-
         for stmt in statements.iter_mut() {
             if let Err(e) = self.analyze_statement(stmt) {
-                self.errors.push(e);
+                ctx.add_error(e);
             }
         }
 

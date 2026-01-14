@@ -1,11 +1,12 @@
 use bitflags::bitflags;
 
 use crate::{
+    compiler::CompilerCtx,
     error::CompilerError,
     lexer::token::{Token, TokenKind},
-    module::{lexed_module::LexedModule, parsed_module::ParsedModule},
     parser::{
         ast::{
+            Ast,
             expr::{Expr, ExprKind, StructLiteralField},
             stmt::{KungBranch, ParamInfo, Stmt, StmtKind},
         },
@@ -19,24 +20,22 @@ pub mod ast;
 pub mod operators;
 mod parsing_context;
 
-pub struct Parser {
-    tokens: Vec<Token>,
-    errors: Vec<CompilerError>,
-    src_filename: String,
+pub struct Parser<'a> {
+    tokens: &'a Vec<Token>,
     current: usize,
+    errors: Vec<CompilerError>,
 }
 
-impl Parser {
-    pub fn new(lexed_mod: LexedModule) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a Vec<Token>) -> Self {
         Self {
-            tokens: lexed_mod.tokens,
-            src_filename: lexed_mod.src_filename,
-            errors: Vec::new(),
+            tokens,
             current: 0,
+            errors: Vec::new(),
         }
     }
 
-    pub fn parse(mut self) -> (ParsedModule, Vec<CompilerError>) {
+    pub fn parse(mut self, ctx: &mut CompilerCtx) -> Ast {
         let mut ast = Vec::new();
         while !self.is_at_end() {
             if self.peek().kind == TokenKind::Eof {
@@ -52,13 +51,9 @@ impl Parser {
             };
         }
 
-        (
-            ParsedModule {
-                ast,
-                src_filename: self.src_filename,
-            },
-            self.errors,
-        )
+        ctx.extend_errors(self.errors);
+
+        ast
     }
 
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
