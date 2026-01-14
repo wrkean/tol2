@@ -57,6 +57,7 @@ pub enum TokenKind {
 
     #[keyword]
     #[stmt_starter]
+    #[semicolon_inferrable]
     Gagawin,
 
     #[keyword]
@@ -65,6 +66,7 @@ pub enum TokenKind {
 
     #[keyword]
     #[stmt_starter]
+    #[semicolon_inferrable]
     Ibalik,
 
     #[keyword]
@@ -75,9 +77,11 @@ pub enum TokenKind {
     Sa,
 
     #[keyword]
+    #[semicolon_inferrable]
     Tama,
 
     #[keyword]
+    #[semicolon_inferrable]
     Mali,
 
     #[keyword]
@@ -106,10 +110,14 @@ pub enum TokenKind {
     Arrow,
 
     // Delimiters
-    LParen,
+    #[semicolon_inferrable]
     RParen,
-    LBrace,
+
+    #[semicolon_inferrable]
     RBrace,
+
+    LParen,
+    LBrace,
     Comma,
     Colon,
     Semicolon,
@@ -117,17 +125,26 @@ pub enum TokenKind {
     Dedent,
 
     // Literals
+    #[semicolon_inferrable]
     Integer,
+
+    #[semicolon_inferrable]
     HexLiteral,
+
+    #[semicolon_inferrable]
     OctalLiteral,
+
+    #[semicolon_inferrable]
     BinLiteral,
+
+    #[semicolon_inferrable]
     Float,
+
+    #[semicolon_inferrable]
     String,
-    UnterminatedString,
+
+    #[semicolon_inferrable]
     Identifier,
-    Comment,
-    Whitespace,
-    Newline,
 
     Eof,
     Dummy,

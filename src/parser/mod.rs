@@ -22,10 +22,7 @@ mod parsing_context;
 
 macro_rules! consume_stmt_terminator {
     ($parser:expr) => {
-        $parser.consume_many(
-            &[TokenKind::Newline, TokenKind::Eof],
-            "<BAGONG_LINYA> o <EOF>",
-        )?
+        $parser.consume(TokenKind::Semicolon, "`;`")?
     };
 }
 

@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
-#[proc_macro_derive(TolTokenKind, attributes(keyword, stmt_starter))]
+#[proc_macro_derive(TolTokenKind, attributes(keyword, stmt_starter, semicolon_inferrable))]
 pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -15,6 +15,7 @@ pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
     let mut keyword_arms = Vec::new();
     let mut keyword_variants = Vec::new();
     let mut stmt_starter_variants = Vec::new();
+    let mut inferrable_variants = Vec::new();
 
     for variant in &data_enum.variants {
         let variant_name = &variant.ident;
@@ -27,6 +28,10 @@ pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
             .attrs
             .iter()
             .any(|attr| attr.path().is_ident("stmt_starter"));
+        let has_semicolon_inferrable = variant
+            .attrs
+            .iter()
+            .any(|attr| attr.path().is_ident("semicolon_inferrable"));
 
         if has_keyword {
             let kw_str = variant_name.to_string().to_lowercase();
@@ -40,6 +45,12 @@ pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
 
         if has_stmt_starter {
             stmt_starter_variants.push(quote! {
+                Self::#variant_name
+            });
+        }
+
+        if has_semicolon_inferrable {
+            inferrable_variants.push(quote! {
                 Self::#variant_name
             });
         }
@@ -57,6 +68,11 @@ pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
     } else {
         quote! {matches!(self, #(#stmt_starter_variants)|*)}
     };
+    let is_semicolon_inferrable_body = if inferrable_variants.is_empty() {
+        quote! {false}
+    } else {
+        quote! {matches!(self, #(#inferrable_variants)|*)}
+    };
     let expanded = quote! {
         impl #enum_name {
             /// Returns Some(Self) if it is a keyword or None from a given &str
@@ -73,6 +89,10 @@ pub fn derive_tokenkind(input: TokenStream) -> TokenStream {
 
             pub fn starts_a_statement(&self) -> bool {
                 #starts_a_statement_body
+            }
+
+            pub fn is_semicolon_inferrable(&self) -> bool {
+                #is_semicolon_inferrable_body
             }
         }
     };
