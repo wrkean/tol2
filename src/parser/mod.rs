@@ -63,6 +63,10 @@ impl<'a> Parser<'a> {
             TokenKind::Sa => self.parse_sa(),
             TokenKind::Habang => self.parse_habang(),
             TokenKind::Kung => self.parse_kung(),
+            TokenKind::Gagawin => {
+                self.advance();
+                Ok(Stmt::new_null())
+            }
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -129,15 +133,17 @@ impl<'a> Parser<'a> {
         let params = self.parse_params()?;
         let param_end = self.consume(TokenKind::RParen, "`)`")?.span.end;
 
-        let return_type = if self.peek().kind.starts_a_type() {
+        let return_type = if self.peek().kind == TokenKind::Babalik {
+            self.advance();
             self.parse_type()?
         } else {
             TolType::Void
         };
+        self.consume(TokenKind::Colon, "`:`")?;
 
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
             kind: StmtKind::Paraan {
@@ -158,7 +164,7 @@ impl<'a> Parser<'a> {
             let id = self
                 .consume(TokenKind::Identifier, "pangalan ng parametro")?
                 .clone();
-            self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+            self.consume(TokenKind::Na, "`na` pagkatapos ng pangalan")?;
             let ttype = self.parse_type()?;
             params.push(ParamInfo {
                 id,
@@ -274,13 +280,13 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
         let start = self.peek().span.start;
 
-        while !self.is_at_eof() && self.peek().kind != TokenKind::RBrace {
+        while !self.is_at_eof() && self.peek().kind != TokenKind::Dedent {
             let stmt = match self.parse_statement() {
                 Ok(s) => s,
                 Err(e) => {
                     self.record(e);
                     self.synchronize_until(|tk| {
-                        tk.starts_a_statement() || tk == &TokenKind::RBrace
+                        tk.starts_a_statement() || tk == &TokenKind::Dedent
                     });
                     continue;
                 }

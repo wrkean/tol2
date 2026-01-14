@@ -1,9 +1,7 @@
 -- Functions
-paraan hello() babalik i32:
+paraan hello(z na i32,) babalik i32:
     ang x na i32 = 2
-dapat x na i32 = 3
-  k
- 1
+    dapat x na i32 = 3
 
 -- uri Tao:
 --     y na i32

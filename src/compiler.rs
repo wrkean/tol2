@@ -54,6 +54,10 @@ impl<'com> Compiler<'com> {
         let parser = Parser::new(&tokens);
         let ast = parser.parse(&mut ctx);
 
+        for stmt in ast.iter() {
+            println!("{:#?}", stmt);
+        }
+
         let analyzer = SemanticAnalyzer::new(ast);
         analyzer.analyze(&mut ctx);
 
