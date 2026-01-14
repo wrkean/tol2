@@ -51,7 +51,7 @@ impl SemanticAnalyzer {
             StmtKind::Ang { .. } => self.analyze_ang(stmt),
             StmtKind::Dapat { .. } => todo!(),
             StmtKind::Ibalik { .. } => todo!(),
-            StmtKind::Sa { .. } => todo!(),
+            StmtKind::Bawat { .. } => todo!(),
             StmtKind::Habang { .. } => todo!(),
             StmtKind::Kung { .. } => todo!(),
             StmtKind::Block { .. } => self.analyze_block(stmt),

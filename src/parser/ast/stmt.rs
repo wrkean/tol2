@@ -51,9 +51,9 @@ pub enum StmtKind {
         id: Token,
         // rhs: Expr,
     },
-    Sa {
-        cond: Expr,
-        bind: Option<Token>,
+    Bawat {
+        bind: Token,
+        iter: Expr,
         block: Box<Stmt>,
     },
     Habang {

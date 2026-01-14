@@ -20,6 +20,15 @@ pub mod ast;
 pub mod operators;
 mod parsing_context;
 
+macro_rules! consume_stmt_terminator {
+    ($parser:expr) => {
+        $parser.consume_many(
+            &[TokenKind::Newline, TokenKind::Eof],
+            "<BAGONG_LINYA> o <EOF>",
+        )?
+    };
+}
+
 pub struct Parser<'a> {
     tokens: &'a Vec<Token>,
     current: usize,
@@ -60,11 +69,12 @@ impl<'a> Parser<'a> {
         match self.peek().kind() {
             TokenKind::Ang | TokenKind::Dapat => self.parse_angdapat(),
             TokenKind::Paraan => self.parse_paraan(),
-            TokenKind::Sa => self.parse_sa(),
+            TokenKind::Bawat => self.parse_bawat(),
             TokenKind::Habang => self.parse_habang(),
             TokenKind::Kung => self.parse_kung(),
             TokenKind::Gagawin => {
                 self.advance();
+                consume_stmt_terminator!(self);
                 Ok(Stmt::new_null())
             }
             TokenKind::Semicolon => {
@@ -189,27 +199,24 @@ impl<'a> Parser<'a> {
         Ok(params)
     }
 
-    fn parse_sa(&mut self) -> Result<Stmt, CompilerError> {
-        let start = self.consume(TokenKind::Sa, "`sa`")?.span.start;
+    fn parse_bawat(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Bawat, "`bawat`")?.span.start;
 
-        let cond = self.parse_expression(0, ExprParseContext::SaStatement)?;
-        let bind = if self.peek().kind == TokenKind::Arrow {
-            self.advance();
-            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+        let bind = self
+            .consume(TokenKind::Identifier, "pangalan pagkatapos ng `bawat`")?
+            .clone();
+        self.consume(TokenKind::Sa, "`sa` pagkatapos ng pangalan")?;
+        let iter = self.parse_expression(0, ExprParseContext::BawatStatement)?;
+        self.consume(TokenKind::Colon, "`:`")?;
 
-            Some(id)
-        } else {
-            None
-        };
-
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
-            kind: StmtKind::Sa {
-                cond,
+            kind: StmtKind::Bawat {
                 bind,
+                iter,
                 block: Box::new(block),
             },
             span: start..end,

@@ -194,6 +194,9 @@ impl<'a> Lexer<'a> {
             '\r' | '\t' | ' ' => {} // Skip whitespace
             '\n' => {
                 self.is_at_start = true;
+                if !self.is_inside_bracket() {
+                    self.add_token(TokenKind::Newline, Some("<BAGONG_LINYA>"));
+                }
             }
             _ => {
                 if ch.is_alphabetic() || ch == '_' {

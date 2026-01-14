@@ -3,7 +3,7 @@ pub enum ExprParseContext {
     AngDapatStatement,
     KungStatement,
     HabangStatement,
-    SaStatement,
+    BawatStatement,
     StandAlone,
     InExpression,
     Argument,

@@ -58,8 +58,8 @@ impl<'com> Compiler<'com> {
             println!("{:#?}", stmt);
         }
 
-        let analyzer = SemanticAnalyzer::new(ast);
-        analyzer.analyze(&mut ctx);
+        // let analyzer = SemanticAnalyzer::new(ast);
+        // analyzer.analyze(&mut ctx);
 
         ctx
     }
