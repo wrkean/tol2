@@ -1,22 +1,18 @@
 use bitflags::bitflags;
 
 use crate::{
+    ast::{
+        Ast,
+        expr::{Expr, ExprKind, StructLiteralField},
+        stmt::{KungBranch, ParamInfo, Stmt, StmtKind},
+    },
     compiler::CompilerCtx,
     error::CompilerError,
     lexer::token::{Token, TokenKind},
-    parser::{
-        ast::{
-            Ast,
-            expr::{Expr, ExprKind, StructLiteralField},
-            stmt::{KungBranch, ParamInfo, Stmt, StmtKind},
-        },
-        operators::Associativity,
-        parsing_context::ExprParseContext,
-    },
+    parser::{operators::Associativity, parsing_context::ExprParseContext},
     toltype::TolType,
 };
 
-pub mod ast;
 pub mod operators;
 mod parsing_context;
 

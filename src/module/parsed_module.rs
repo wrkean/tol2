@@ -1,4 +1,4 @@
-use crate::parser::ast::Ast;
+use crate::ast::Ast;
 
 pub struct ParsedModule {
     pub ast: Ast,
