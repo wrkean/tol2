@@ -70,9 +70,10 @@ impl<'a> Parser<'a> {
             TokenKind::Habang => self.parse_habang(),
             TokenKind::Kung => self.parse_kung(),
             TokenKind::Gagawin => {
+                let start = self.peek().span.start;
                 self.advance();
-                consume_stmt_terminator!(self);
-                Ok(Stmt::new_null())
+                let end = consume_stmt_terminator!(self).span.end;
+                Ok(Stmt::new_gagawin(start..end))
             }
             TokenKind::Semicolon => {
                 self.advance();
@@ -85,10 +86,6 @@ impl<'a> Parser<'a> {
 
                 block
             }
-            TokenKind::RBrace => Err(CompilerError::UnmatchedDelimiter {
-                delimiter: "`}`".to_string(),
-                span: self.peek().span().into(),
-            }),
             _ => Err(CompilerError::InvalidStartOfStatement {
                 span: self.peek().span().into(),
             }),
@@ -107,15 +104,12 @@ impl<'a> Parser<'a> {
                 "pangalan pagkatapos ng `ang` o `dapat`",
             )?
             .clone();
-        self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+        self.consume(TokenKind::Na, "`na` pagkatapos ng pangalan")?;
         let ttype = self.parse_type()?;
 
         self.consume(TokenKind::Equal, "`=` pagkatapos ng tipo")?;
         let rhs = self.parse_expression(0, ExprParseContext::AngDapatStatement)?;
-        let end = self
-            .consume(TokenKind::Semicolon, "`;` pagkatapos ng expresyon")?
-            .span
-            .end;
+        let end = consume_stmt_terminator!(self).span.end;
 
         Ok(Stmt {
             kind: match kind {

@@ -56,7 +56,7 @@ impl SemanticAnalyzer {
             StmtKind::Kung { .. } => todo!(),
             StmtKind::Block { .. } => self.analyze_block(stmt),
             StmtKind::Null => Ok(()),
-            StmtKind::Dummy => todo!(),
+            StmtKind::Gagawin => todo!(),
         }
     }
 
