@@ -1,5 +1,5 @@
 -- Functions
-paraan hello(z na i32,) babalik i32:
+paraan hello(z na i32,) -> i32:
     ang x na i32 = 2
     dapat x na i32 = 3
 
@@ -19,22 +19,22 @@ bawat x sa iterator:
 habang tama:
     gagawin
 
--- paraan bago() babalik Sarili:
+-- paraan bago() -> Sarili:
 --     ibalik Sarili {
 --         y: 5,
 --         z: 7,
 --     }
 --
--- paraan edad(&sarili) babalik i32:
+-- paraan edad(&sarili) -> i32:
 --     ibalik sarili.y
 
 -- ugali Nagsasalita:
---     paraan salita(reperensya sarili)
+--     paraan salita(sarili)
 --
 -- ugali ng Tao ang Nagsasalita:
 --     paraan salita(sarili):
 --         @sa_stdout($"Ako ay isang tao, may {sarili.y} na taong gulang")
 --
 -- ugali ng Hayop ang Nagsasalita:
---     paraan salita(&sarili)
+--     paraan salita(sarili)
 --         @sa_stdout($"Ako ay isang hayop, may {sarili.z} na taong gulang")

@@ -10,7 +10,7 @@ pub enum CompilerError {
     Lexer {
         message: String,
 
-        #[label("dito")]
+        #[label("ito")]
         span: SourceSpan,
 
         #[help]
@@ -60,11 +60,11 @@ pub enum CompilerError {
         span: SourceSpan,
     },
 
-    #[error("{}", "Walang kapares na bracket".bright_red())]
+    #[error("{}", "Hindi naisaradong bracket".bright_red())]
     UnmatchedBracket {
         bracket: char,
 
-        #[label("Walang kapares ang `{bracket}`")]
+        #[label("Ang `{bracket}` ay hindi naisarado")]
         span: SourceSpan,
     },
 

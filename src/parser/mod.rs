@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
         let params = self.parse_params()?;
         let param_end = self.consume(TokenKind::RParen, "`)`")?.span.end;
 
-        let return_type = if self.peek().kind == TokenKind::Babalik {
+        let return_type = if self.peek().kind == TokenKind::ThinArrow {
             self.advance();
             self.parse_type()?
         } else {

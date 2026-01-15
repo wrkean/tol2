@@ -10,16 +10,21 @@ pub mod token;
 
 macro_rules! enter_bracket_and_add {
     ($lexer:expr, $ch:expr, $kind:expr) => {{
-        $lexer.enter_bracket($ch);
+        $lexer.enter_bracket($ch, $lexer.span());
         $lexer.add_token($kind, None);
     }};
 }
 
 macro_rules! exit_bracket_and_add {
     ($lexer:expr, $ch:expr, $kind:expr) => {{
-        $lexer.exit_bracket($ch, 0..0)?;
+        $lexer.exit_bracket($ch, $lexer.span())?;
         $lexer.add_token($kind, None);
     }};
+}
+
+struct BracketInfo {
+    bracket: char,
+    span: Range<usize>,
 }
 
 pub struct Lexer<'a> {
@@ -27,7 +32,7 @@ pub struct Lexer<'a> {
     source_iter: Peekable<Chars<'a>>,
     tokens: Vec<Token>,
     indent_stack: Vec<usize>,
-    bracket_stack: Vec<char>,
+    bracket_stack: Vec<BracketInfo>,
     start: usize,
     current: usize,
     is_at_start: bool,
@@ -59,6 +64,13 @@ impl<'a> Lexer<'a> {
                 continue;
             }
             self.lex_token().unwrap_or_else(|e| ctx.add_error(e));
+        }
+
+        for bracket in self.bracket_stack.iter() {
+            ctx.add_error(CompilerError::UnmatchedBracket {
+                bracket: bracket.bracket,
+                span: bracket.span.clone().into(),
+            });
         }
 
         // Flush remaining indents
@@ -143,6 +155,8 @@ impl<'a> Lexer<'a> {
                             break;
                         }
                     }
+                } else if self.match_char('>') {
+                    self.add_token(TokenKind::ThinArrow, None);
                 } else {
                     self.add_token(TokenKind::Minus, None)
                 }
@@ -151,7 +165,7 @@ impl<'a> Lexer<'a> {
                 if self.match_char('=') {
                     self.add_token(TokenKind::EqualEqual, None);
                 } else if self.match_char('>') {
-                    self.add_token(TokenKind::Arrow, None);
+                    self.add_token(TokenKind::FatArrow, None);
                 } else {
                     self.add_token(TokenKind::Equal, None);
                 }
@@ -218,6 +232,12 @@ impl<'a> Lexer<'a> {
                     } else {
                         self.lex_number(NumberLexingMode::Normal);
                     }
+                } else {
+                    return Err(CompilerError::Lexer {
+                        message: "Hindi parte ng sintax".to_string(),
+                        span: self.span().into(),
+                        help: None,
+                    });
                 }
             }
         };
@@ -415,8 +435,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn enter_bracket(&mut self, bracket: char) {
-        self.bracket_stack.push(bracket);
+    fn enter_bracket(&mut self, bracket: char, span: Range<usize>) {
+        self.bracket_stack.push(BracketInfo { bracket, span });
     }
 
     fn exit_bracket(&mut self, bracket: char, span: Range<usize>) -> Result<(), CompilerError> {
@@ -433,7 +453,7 @@ impl<'a> Lexer<'a> {
             });
         }
 
-        if expected != self.bracket_stack.pop().unwrap() {
+        if expected != self.bracket_stack.pop().unwrap().bracket {
             Err(CompilerError::UnmatchedBracket {
                 bracket,
                 span: span.into(),

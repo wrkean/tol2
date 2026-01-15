@@ -1,11 +1,12 @@
 use crate::{
-    analyzer::SemanticAnalyzer, driver::CompilerOptions, error::CompilerError, lexer::Lexer,
+    driver::CompilerOptions, error::CompilerError, lexer::Lexer,
     module::module_registry::ModuleRegistry, parser::Parser,
 };
 use std::path::Path;
 
 #[derive(Default)]
 pub struct CompilerCtx {
+    pub continue_compiling: bool,
     pub errors: Vec<CompilerError>,
 }
 
@@ -49,6 +50,10 @@ impl<'com> Compiler<'com> {
 
         for tok in tokens.iter() {
             println!("{} <=> {:?}", tok.lexeme(), tok.kind());
+        }
+
+        if !ctx.continue_compiling {
+            return ctx;
         }
 
         let parser = Parser::new(&tokens);

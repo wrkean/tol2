@@ -107,7 +107,8 @@ pub enum TokenKind {
     LessEqual,
     Greater,
     GreaterEqual,
-    Arrow,
+    FatArrow,
+    ThinArrow,
 
     // Delimiters
     #[semicolon_inferrable]
@@ -116,12 +117,14 @@ pub enum TokenKind {
     #[semicolon_inferrable]
     RBrace,
 
+    #[stmt_starter]
+    Indent,
+
     LParen,
     LBrace,
     Comma,
     Colon,
     Semicolon,
-    Indent,
     Dedent,
 
     // Literals
