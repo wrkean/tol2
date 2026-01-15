@@ -11,6 +11,13 @@ pub struct CompilerCtx {
 }
 
 impl CompilerCtx {
+    pub fn new() -> Self {
+        Self {
+            continue_compiling: true,
+            errors: Vec::new(),
+        }
+    }
+
     pub fn add_error(&mut self, error: CompilerError) {
         self.errors.push(error);
     }
@@ -43,7 +50,7 @@ impl<'com> Compiler<'com> {
             .to_str()
             .unwrap();
 
-        let mut ctx = CompilerCtx::default();
+        let mut ctx = CompilerCtx::new();
 
         let lexer = Lexer::new(source_code, source_file_name);
         let tokens = lexer.lex(&mut ctx);

@@ -203,7 +203,7 @@ impl<'a> Parser<'a> {
             .consume(TokenKind::Identifier, "pangalan pagkatapos ng `bawat`")?
             .clone();
         self.consume(TokenKind::Sa, "`sa` pagkatapos ng pangalan")?;
-        let iter = self.parse_expression(0, ExprParseContext::BawatStatement)?;
+        let iter_expr = self.parse_expression(0, ExprParseContext::BawatStatement)?;
         self.consume(TokenKind::Colon, "`:`")?;
 
         self.consume(TokenKind::Indent, "indent")?;
@@ -213,7 +213,7 @@ impl<'a> Parser<'a> {
         Ok(Stmt {
             kind: StmtKind::Bawat {
                 bind,
-                iter,
+                iter: iter_expr,
                 block: Box::new(block),
             },
             span: start..end,
@@ -224,10 +224,11 @@ impl<'a> Parser<'a> {
         let start = self.consume(TokenKind::Habang, "`habang`")?.span.start;
 
         let cond = self.parse_expression(0, ExprParseContext::HabangStatement)?;
+        self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
             kind: StmtKind::Habang {
@@ -245,24 +246,27 @@ impl<'a> Parser<'a> {
 
         // Parse initial `kung` statement
         let cond = Some(self.parse_expression(0, ExprParseContext::KungStatement)?);
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
+
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        self.consume(TokenKind::RBrace, "`}`")?;
+        self.consume(TokenKind::Dedent, "dedent")?;
         branches.push(KungBranch { cond, block });
 
         // Parse following `kungdi` brannches
         let mut end = 0;
         while self.peek().kind == TokenKind::Kungdi {
             self.consume(TokenKind::Kungdi, "`kungdi`")?;
-            let cond = if self.peek().kind != TokenKind::LBrace {
+            let cond = if self.peek().kind != TokenKind::Colon {
                 Some(self.parse_expression(0, ExprParseContext::KungStatement)?)
             } else {
                 None
             };
+            self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-            self.consume(TokenKind::LBrace, "`{`")?;
+            self.consume(TokenKind::Indent, "indent")?;
             let block = self.parse_block()?;
-            self.consume(TokenKind::RBrace, "`}`")?;
+            self.consume(TokenKind::Dedent, "dedent")?;
 
             let block_end = block.span.end;
             let is_done = cond.is_none();
