@@ -1,32 +1,47 @@
-paraan hello() babalik i32:
+-- Functions
+paraan hello(z na i32,) -> i32:
     ang x na i32 = 2
     dapat x na i32 = 3
 
-uri Tao:
-    y na i32
-    z na i32
-
-uri Hayop:
-    y na i32
-    z na i32
-
--- ilahad ang Tao:
---    paraan bago() babalik Sarili:
---        ibalik Sarili {
---            y: 5,
---            z: 7,
---        }
+-- uri Tao:
+--     y na i32
+--     z na i32
 --
---    paraan edad(&sarili) babalik ng i32:
---        ibalik sarili.y
+-- uri Hayop:
+--     y na i32
+--     z na i32
 
-ugali Nagsasalita:
-    paraan salita(&sarili)
+-- For loop
+bawat x sa iterator:
+    gagawin
 
-ugali ng Tao ang Nagsasalita:
-    paraan salita(&sarili):
-        @sa_stdout($"Ako ay isang tao, may {sarili.y} na taong gulang")
+kung 1 == 1:
+    gagawin
+kungdi 1 == 3:
+    gagawin
+kungdi:
+    gagawin
 
-ugali ng Hayop ang Nagsasalita:
-    paraan salita(&sarili)
-        @sa_stdout($"Ako ay isang hayop, may {sarili.z} na taong gulang")
+-- While loop
+habang tama:
+    gagawin
+
+-- paraan bago() -> Sarili:
+--     ibalik Sarili {
+--         y: 5,
+--         z: 7,
+--     }
+--
+-- paraan edad(&sarili) -> i32:
+--     ibalik sarili.y
+
+-- ugali Nagsasalita:
+--     paraan salita(sarili)
+--
+-- ugali ng Tao ang Nagsasalita:
+--     paraan salita(sarili):
+--         @sa_stdout($"Ako ay isang tao, may {sarili.y} na taong gulang")
+--
+-- ugali ng Hayop ang Nagsasalita:
+--     paraan salita(sarili)
+--         @sa_stdout($"Ako ay isang hayop, may {sarili.z} na taong gulang")

@@ -9,17 +9,17 @@ pub struct Stmt {
 }
 
 impl Stmt {
-    pub fn new_dummy() -> Self {
-        Self {
-            kind: StmtKind::Dummy,
-            span: 0..0,
-        }
-    }
-
     pub fn new_null() -> Self {
         Self {
             kind: StmtKind::Null,
             span: 0..0,
+        }
+    }
+
+    pub fn new_gagawin(span: Range<usize>) -> Self {
+        Self {
+            kind: StmtKind::Gagawin,
+            span,
         }
     }
 
@@ -51,9 +51,9 @@ pub enum StmtKind {
         id: Token,
         // rhs: Expr,
     },
-    Sa {
-        cond: Expr,
-        bind: Option<Token>,
+    Bawat {
+        bind: Token,
+        iter: Expr,
         block: Box<Stmt>,
     },
     Habang {
@@ -66,10 +66,10 @@ pub enum StmtKind {
     Block {
         stmts: Vec<Stmt>,
     },
-    Null,
+    Gagawin,
 
     // Special
-    Dummy,
+    Null,
 }
 
 #[derive(Debug, Clone)]

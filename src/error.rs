@@ -1,10 +1,8 @@
-use std::fmt;
+#![allow(unused)]
 
 use colored::Colorize;
 use miette::{Diagnostic, LabeledSpan, SourceSpan};
 use thiserror::Error;
-
-use crate::lexer::token::TokenKind;
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum CompilerError {
@@ -12,7 +10,7 @@ pub enum CompilerError {
     Lexer {
         message: String,
 
-        #[label("dito")]
+        #[label("ito")]
         span: SourceSpan,
 
         #[help]
@@ -62,11 +60,11 @@ pub enum CompilerError {
         span: SourceSpan,
     },
 
-    #[error("{}", "Walang kapares na bracket".bright_red())]
+    #[error("{}", "Hindi naisaradong bracket".bright_red())]
     UnmatchedBracket {
         bracket: char,
 
-        #[label("Walang kapares ang `{bracket}`")]
+        #[label("Ang `{bracket}` ay hindi naisarado")]
         span: SourceSpan,
     },
 
@@ -108,108 +106,44 @@ pub enum CompilerError {
         #[label(collection)]
         spans: Vec<LabeledSpan>, // Spans indicate the mismatched types
     },
-}
 
-#[derive(Debug, Default, Clone, PartialEq)]
-pub enum LexingError {
-    InvalidChar {
-        character: String,
-        span: logos::Span,
+    #[error("{}", "Maling pag-dedent".bright_red())]
+    InvalidDedent {
+        #[label("dito")]
+        span: SourceSpan,
     },
+
+    #[error("{}", "Hindi naisarang string".bright_red())]
     UnterminatedString {
-        span: logos::Span,
+        #[label("simula ng string")]
+        span: SourceSpan,
     },
 
-    #[default]
-    Other,
-}
-
-impl fmt::Display for LexingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LexingError::InvalidChar { .. } => {
-                write!(f, "invalid na token")
-            }
-            LexingError::UnterminatedString { .. } => write!(f, "hindi natapos na string"),
-            LexingError::Other => unreachable!(),
-        }
-    }
-}
-
-impl LexingError {
-    pub fn span(&self) -> logos::Span {
-        match self {
-            LexingError::InvalidChar { span, .. } | LexingError::UnterminatedString { span } => {
-                span.to_owned()
-            }
-            LexingError::Other => unreachable!(),
-        }
-    }
-
-    pub fn help(&self) -> Option<&str> {
-        match self {
-            LexingError::InvalidChar { .. } => {
-                Some("baka ang (mga) karakter ay hindi parte ng sintaks")
-            }
-            LexingError::UnterminatedString { .. } | LexingError::Other => None,
-        }
-    }
-
-    pub fn unterminated_string(lexer: &mut logos::Lexer<TokenKind>) -> Result<(), LexingError> {
-        let start = lexer.span().start;
-        let remainder = lexer.remainder();
-
-        let mut offset = 0;
-        for c in remainder.chars() {
-            if c == '\n' {
-                break;
-            }
-            offset += c.len_utf8();
-        }
-
-        lexer.bump(offset);
-
-        Err(LexingError::UnterminatedString {
-            span: start..start + offset,
-        })
-    }
-
-    pub fn invalid_char(lexer: &mut logos::Lexer<TokenKind>) -> LexingError {
-        let start = lexer.span().start;
-        let remainder = lexer.remainder();
-
-        let mut characters = String::new();
-        let mut offset = 0;
-
-        for c in remainder.chars() {
-            if can_start_valid_token(c) {
-                break;
-            }
-
-            characters.push(c);
-            offset += c.len_utf8();
-        }
-
-        lexer.bump(offset); // safe bump inside remainder
-
-        LexingError::InvalidChar {
-            character: characters,
-            span: start..start + offset,
-        }
-    }
-}
-
-fn can_start_valid_token(c: char) -> bool {
-    if c == '_' || c.is_ascii_alphabetic() {
-        return true;
-    }
-
-    if c.is_ascii_digit() {
-        return true;
-    }
-
-    matches!(
-        c,
-        '+' | '-' | '*' | '/' | '=' | '!' | '<' | '>' | ':' | ';' | ',' | '(' | ')' | '{' | '}'
-    )
+    #[error("{}", "Hindi kilalang escape character".bright_red())]
+    InvalidEscapeCharacter {
+        #[label("ito")]
+        span: SourceSpan,
+    },
+    // #[error("{}", "Hindi wastong numero sa hexadecimal".bright_red())]
+    // #[help(
+    //     "Ang hexadecimal na literal ay may sakop na `0` hanggang `F` lamang (0, 1, 2, ... 8, 9, A, ... E, F)"
+    // )]
+    // InvalidHexLiteral {
+    //     #[label("ito")]
+    //     span: SourceSpan,
+    // },
+    //
+    // #[error("{}", "Hindi wastong numero sa binary".bright_red())]
+    // #[help("Ang binary na literal ay may sakop na `0` at `1` lamang")]
+    // InvalidBinLiteral {
+    //     #[label("ito")]
+    //     span: SourceSpan,
+    // },
+    //
+    // #[error("{}", "Hindi wastong numero sa octal".bright_red())]
+    // #[help("Ang octal na literal ay may sakop na `0` hanggang `7` lamang")]
+    // InvalidOctLiteral {
+    //     #[label("ito")]
+    //     span: SourceSpan,
+    // },
 }

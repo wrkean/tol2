@@ -49,15 +49,17 @@ pub fn compile(opts: CompilerOptions) -> Result<(), ErrorsWithOptSource> {
         .unwrap()
         .to_string();
 
-    let compiler = Compiler::new(opts);
-    compiler
-        .run(&source_code)
-        .map_err(|ve| ErrorsWithOptSource {
+    let mut compiler = Compiler::new(opts);
+    let compiler_ctx = compiler.run(&source_code);
+    let errors = compiler_ctx.errors;
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ErrorsWithOptSource {
             source_code: Some(NamedSource::new(file_name, Arc::from(source_code))),
-            errors: ve,
-        })?;
-
-    Ok(())
+            errors,
+        })
+    }
 }
 
 // NOTE: stdlib is searched in the current directory for now

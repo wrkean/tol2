@@ -1,11 +1,12 @@
 use bitflags::bitflags;
 
 use crate::{
+    compiler::CompilerCtx,
     error::CompilerError,
     lexer::token::{Token, TokenKind},
-    module::{lexed_module::LexedModule, parsed_module::ParsedModule},
     parser::{
         ast::{
+            Ast,
             expr::{Expr, ExprKind, StructLiteralField},
             stmt::{KungBranch, ParamInfo, Stmt, StmtKind},
         },
@@ -19,24 +20,28 @@ pub mod ast;
 pub mod operators;
 mod parsing_context;
 
-pub struct Parser {
-    tokens: Vec<Token>,
-    errors: Vec<CompilerError>,
-    src_filename: String,
-    current: usize,
+macro_rules! consume_stmt_terminator {
+    ($parser:expr) => {
+        $parser.consume(TokenKind::Semicolon, "`;`")?
+    };
 }
 
-impl Parser {
-    pub fn new(lexed_mod: LexedModule) -> Self {
+pub struct Parser<'a> {
+    tokens: &'a Vec<Token>,
+    current: usize,
+    errors: Vec<CompilerError>,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a Vec<Token>) -> Self {
         Self {
-            tokens: lexed_mod.tokens,
-            src_filename: lexed_mod.src_filename,
-            errors: Vec::new(),
+            tokens,
             current: 0,
+            errors: Vec::new(),
         }
     }
 
-    pub fn parse(mut self) -> (ParsedModule, Vec<CompilerError>) {
+    pub fn parse(mut self, ctx: &mut CompilerCtx) -> Ast {
         let mut ast = Vec::new();
         while !self.is_at_end() {
             if self.peek().kind == TokenKind::Eof {
@@ -52,22 +57,24 @@ impl Parser {
             };
         }
 
-        (
-            ParsedModule {
-                ast,
-                src_filename: self.src_filename,
-            },
-            self.errors,
-        )
+        ctx.extend_errors(self.errors);
+
+        ast
     }
 
     pub fn parse_statement(&mut self) -> Result<Stmt, CompilerError> {
         match self.peek().kind() {
             TokenKind::Ang | TokenKind::Dapat => self.parse_angdapat(),
             TokenKind::Paraan => self.parse_paraan(),
-            TokenKind::Sa => self.parse_sa(),
+            TokenKind::Bawat => self.parse_bawat(),
             TokenKind::Habang => self.parse_habang(),
             TokenKind::Kung => self.parse_kung(),
+            TokenKind::Gagawin => {
+                let start = self.peek().span.start;
+                self.advance();
+                let end = consume_stmt_terminator!(self).span.end;
+                Ok(Stmt::new_gagawin(start..end))
+            }
             TokenKind::Semicolon => {
                 self.advance();
                 Ok(Stmt::new_null())
@@ -79,10 +86,6 @@ impl Parser {
 
                 block
             }
-            TokenKind::RBrace => Err(CompilerError::UnmatchedDelimiter {
-                delimiter: "`}`".to_string(),
-                span: self.peek().span().into(),
-            }),
             _ => Err(CompilerError::InvalidStartOfStatement {
                 span: self.peek().span().into(),
             }),
@@ -101,15 +104,12 @@ impl Parser {
                 "pangalan pagkatapos ng `ang` o `dapat`",
             )?
             .clone();
-        self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+        self.consume(TokenKind::Na, "`na` pagkatapos ng pangalan")?;
         let ttype = self.parse_type()?;
 
         self.consume(TokenKind::Equal, "`=` pagkatapos ng tipo")?;
         let rhs = self.parse_expression(0, ExprParseContext::AngDapatStatement)?;
-        let end = self
-            .consume(TokenKind::Semicolon, "`;` pagkatapos ng expresyon")?
-            .span
-            .end;
+        let end = consume_stmt_terminator!(self).span.end;
 
         Ok(Stmt {
             kind: match kind {
@@ -134,15 +134,17 @@ impl Parser {
         let params = self.parse_params()?;
         let param_end = self.consume(TokenKind::RParen, "`)`")?.span.end;
 
-        let return_type = if self.peek().kind.starts_a_type() {
+        let return_type = if self.peek().kind == TokenKind::ThinArrow {
+            self.advance();
             self.parse_type()?
         } else {
             TolType::Void
         };
+        self.consume(TokenKind::Colon, "`:`")?;
 
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
             kind: StmtKind::Paraan {
@@ -163,7 +165,7 @@ impl Parser {
             let id = self
                 .consume(TokenKind::Identifier, "pangalan ng parametro")?
                 .clone();
-            self.consume(TokenKind::Colon, "`:` pagkatapos ng pangalan")?;
+            self.consume(TokenKind::Na, "`na` pagkatapos ng pangalan")?;
             let ttype = self.parse_type()?;
             params.push(ParamInfo {
                 id,
@@ -188,27 +190,24 @@ impl Parser {
         Ok(params)
     }
 
-    fn parse_sa(&mut self) -> Result<Stmt, CompilerError> {
-        let start = self.consume(TokenKind::Sa, "`sa`")?.span.start;
+    fn parse_bawat(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Bawat, "`bawat`")?.span.start;
 
-        let cond = self.parse_expression(0, ExprParseContext::SaStatement)?;
-        let bind = if self.peek().kind == TokenKind::Arrow {
-            self.advance();
-            let id = self.consume(TokenKind::Identifier, "pangalan")?.clone();
+        let bind = self
+            .consume(TokenKind::Identifier, "pangalan pagkatapos ng `bawat`")?
+            .clone();
+        self.consume(TokenKind::Sa, "`sa` pagkatapos ng pangalan")?;
+        let iter_expr = self.parse_expression(0, ExprParseContext::BawatStatement)?;
+        self.consume(TokenKind::Colon, "`:`")?;
 
-            Some(id)
-        } else {
-            None
-        };
-
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
-            kind: StmtKind::Sa {
-                cond,
+            kind: StmtKind::Bawat {
                 bind,
+                iter: iter_expr,
                 block: Box::new(block),
             },
             span: start..end,
@@ -219,10 +218,11 @@ impl Parser {
         let start = self.consume(TokenKind::Habang, "`habang`")?.span.start;
 
         let cond = self.parse_expression(0, ExprParseContext::HabangStatement)?;
+        self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        let end = self.consume(TokenKind::RBrace, "`}`")?.span.end;
+        let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
             kind: StmtKind::Habang {
@@ -240,24 +240,27 @@ impl Parser {
 
         // Parse initial `kung` statement
         let cond = Some(self.parse_expression(0, ExprParseContext::KungStatement)?);
-        self.consume(TokenKind::LBrace, "`{`")?;
+        self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
+
+        self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
-        self.consume(TokenKind::RBrace, "`}`")?;
+        self.consume(TokenKind::Dedent, "dedent")?;
         branches.push(KungBranch { cond, block });
 
         // Parse following `kungdi` brannches
         let mut end = 0;
         while self.peek().kind == TokenKind::Kungdi {
             self.consume(TokenKind::Kungdi, "`kungdi`")?;
-            let cond = if self.peek().kind != TokenKind::LBrace {
+            let cond = if self.peek().kind != TokenKind::Colon {
                 Some(self.parse_expression(0, ExprParseContext::KungStatement)?)
             } else {
                 None
             };
+            self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-            self.consume(TokenKind::LBrace, "`{`")?;
+            self.consume(TokenKind::Indent, "indent")?;
             let block = self.parse_block()?;
-            self.consume(TokenKind::RBrace, "`}`")?;
+            self.consume(TokenKind::Dedent, "dedent")?;
 
             let block_end = block.span.end;
             let is_done = cond.is_none();
@@ -279,13 +282,13 @@ impl Parser {
         let mut stmts = Vec::new();
         let start = self.peek().span.start;
 
-        while !self.is_at_eof() && self.peek().kind != TokenKind::RBrace {
+        while !self.is_at_eof() && self.peek().kind != TokenKind::Dedent {
             let stmt = match self.parse_statement() {
                 Ok(s) => s,
                 Err(e) => {
                     self.record(e);
                     self.synchronize_until(|tk| {
-                        tk.starts_a_statement() || tk == &TokenKind::RBrace
+                        tk.starts_a_statement() || tk == &TokenKind::Dedent
                     });
                     continue;
                 }
