@@ -70,21 +70,16 @@ pub enum CompilerError {
 
     #[error("{}", "Hindi naideklarang pangalan".bright_red())]
     UndeclaredSymbol {
-        message: String,
-
-        #[label("{message}")]
+        #[label("Hindi pa ito naideklara")]
         span: SourceSpan,
     },
 
     #[error("{}", "Pagdeklara ulit ng kaparehong pangalan sa kaparehong sakop".bright_red())]
     Redeclaration {
-        declared_message: String,
-        redeclared_message: String,
-
-        #[label("{declared_message}")]
+        #[label("Naideklara na dito")]
         declared_span: SourceSpan,
 
-        #[label("{redeclared_message}")]
+        #[label("Idineklara ulit dito")]
         redeclared_span: SourceSpan,
     },
 
@@ -98,13 +93,21 @@ pub enum CompilerError {
     },
 
     #[error("{} Hindi pwede ang `{lhs_type}` at `{rhs_type}`", "Mismatch ng tipo:".bright_red())]
-    #[help("Subukang gamitin ang `gawing` (halimbawa: `<expresyon> gawing <tipo>`)")]
     TypeMismatch {
         lhs_type: String,
         rhs_type: String,
 
         #[label(collection)]
-        spans: Vec<LabeledSpan>, // Spans indicate the mismatched types
+        spans: Vec<LabeledSpan>,
+    },
+
+    #[error("{}", "Hindi inaasahang tipo".bright_red())]
+    UnexpectedType2 {
+        expected: String,
+        found: String,
+
+        #[label("Umasa ng `{expected}` pero ito ay `{found}`")]
+        span: SourceSpan,
     },
 
     #[error("{}", "Maling pag-dedent".bright_red())]
@@ -124,26 +127,19 @@ pub enum CompilerError {
         #[label("ito")]
         span: SourceSpan,
     },
-    // #[error("{}", "Hindi wastong numero sa hexadecimal".bright_red())]
-    // #[help(
-    //     "Ang hexadecimal na literal ay may sakop na `0` hanggang `F` lamang (0, 1, 2, ... 8, 9, A, ... E, F)"
-    // )]
-    // InvalidHexLiteral {
-    //     #[label("ito")]
-    //     span: SourceSpan,
-    // },
-    //
-    // #[error("{}", "Hindi wastong numero sa binary".bright_red())]
-    // #[help("Ang binary na literal ay may sakop na `0` at `1` lamang")]
-    // InvalidBinLiteral {
-    //     #[label("ito")]
-    //     span: SourceSpan,
-    // },
-    //
-    // #[error("{}", "Hindi wastong numero sa octal".bright_red())]
-    // #[help("Ang octal na literal ay may sakop na `0` hanggang `7` lamang")]
-    // InvalidOctLiteral {
-    //     #[label("ito")]
-    //     span: SourceSpan,
-    // },
+
+    #[error("{}", "Maling bilang ng argumento".bright_red())]
+    InvalidNumberOfArguments {
+        arg_len: usize,
+        expected_len: usize,
+
+        #[label("{arg_len} na argumento, umaasa ng {expected_len}")]
+        args_span: SourceSpan,
+    },
+
+    #[error("{}", "Tinawag ang hindi natatawag")]
+    InvalidCallExpression {
+        #[label("Baka hindi ito idineklara bilang isang `paraan`?")]
+        span: SourceSpan,
+    },
 }

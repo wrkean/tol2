@@ -1,6 +1,10 @@
 use crate::{
-    driver::CompilerOptions, error::CompilerError, lexer::Lexer,
-    module::module_registry::ModuleRegistry, parser::Parser,
+    analyzer::{SemanticAnalyzer, symbol::Symbol},
+    driver::CompilerOptions,
+    error::CompilerError,
+    lexer::Lexer,
+    module::module_registry::ModuleRegistry,
+    parser::Parser,
 };
 use std::path::Path;
 
@@ -8,6 +12,7 @@ use std::path::Path;
 pub struct CompilerCtx {
     pub continue_compiling: bool,
     pub errors: Vec<CompilerError>,
+    pub symbol_table: Vec<Symbol>,
 }
 
 impl CompilerCtx {
@@ -15,6 +20,7 @@ impl CompilerCtx {
         Self {
             continue_compiling: true,
             errors: Vec::new(),
+            symbol_table: Vec::new(),
         }
     }
 
@@ -70,8 +76,10 @@ impl<'com> Compiler<'com> {
             println!("{:#?}", stmt);
         }
 
-        // let analyzer = SemanticAnalyzer::new(ast);
-        // analyzer.analyze(&mut ctx);
+        let analyzer = SemanticAnalyzer::new(&mut ctx);
+        let typed_ast = analyzer.analyze(ast);
+        println!("{:#?}", typed_ast);
+        println!("{:#?}", ctx.symbol_table);
 
         ctx
     }

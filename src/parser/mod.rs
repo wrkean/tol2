@@ -397,42 +397,43 @@ impl<'a> Parser<'a> {
 
     fn nud(&mut self) -> Result<Expr, CompilerError> {
         let current_tok = self.peek().clone();
+        let current_tok_span = current_tok.span();
 
         match current_tok.kind() {
             TokenKind::Integer => {
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::Integer {
-                        lexeme: current_tok.lexeme.clone(),
+                        lexeme: current_tok,
                     },
-                    span: current_tok.span(),
+                    span: current_tok_span,
                 })
             }
             TokenKind::Float => {
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::Float {
-                        lexeme: current_tok.lexeme.clone(),
+                        lexeme: current_tok,
                     },
-                    span: current_tok.span(),
+                    span: current_tok_span,
                 })
             }
             TokenKind::Tama | TokenKind::Mali => {
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::Boolean {
-                        lexeme: current_tok.lexeme.clone(),
+                        lexeme: current_tok,
                     },
-                    span: current_tok.span(),
+                    span: current_tok_span,
                 })
             }
             TokenKind::Identifier => {
                 self.advance();
                 Ok(Expr {
                     kind: ExprKind::Identifier {
-                        lexeme: current_tok.lexeme.clone(),
+                        lexeme: current_tok,
                     },
-                    span: current_tok.span(),
+                    span: current_tok_span,
                 })
             }
             TokenKind::LParen => {

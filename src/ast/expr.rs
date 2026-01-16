@@ -1,24 +1,26 @@
 use std::{fmt, ops::Range};
 
-#[derive(Debug)]
+use crate::lexer::token::Token;
+
+#[derive(Debug, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
     pub span: Range<usize>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExprKind {
     Integer {
-        lexeme: String,
+        lexeme: Token,
     },
     Float {
-        lexeme: String,
+        lexeme: Token,
     },
     Boolean {
-        lexeme: String,
+        lexeme: Token,
     },
     Identifier {
-        lexeme: String,
+        lexeme: Token,
     },
     Add {
         left: Box<Expr>,
@@ -103,7 +105,7 @@ impl fmt::Display for Expr {
             ExprKind::Integer { lexeme }
             | ExprKind::Float { lexeme }
             | ExprKind::Boolean { lexeme }
-            | ExprKind::Identifier { lexeme } => write!(f, "{}", lexeme),
+            | ExprKind::Identifier { lexeme } => write!(f, "{}", lexeme.lexeme()),
             ExprKind::Add { left, right } => write!(f, "(+ {} {})", left, right),
             ExprKind::Sub { left, right } => write!(f, "(- {} {})", left, right),
             ExprKind::Mult { left, right } => write!(f, "(* {} {})", left, right),
@@ -121,5 +123,5 @@ impl fmt::Display for Expr {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StructLiteralField(pub String, pub Option<Expr>);

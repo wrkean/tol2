@@ -8,6 +8,7 @@ pub mod error;
 pub mod module;
 pub mod toltype;
 
+mod analyzer;
 mod ast;
 mod lexer;
 mod parser;
