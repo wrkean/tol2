@@ -4,6 +4,7 @@ pub enum ExprParseContext {
     KungStatement,
     HabangStatement,
     BawatStatement,
+    IbalikStatement,
     InExpression,
     Argument,
     StructLiteralField,
@@ -11,6 +12,9 @@ pub enum ExprParseContext {
 
 impl ExprParseContext {
     pub fn can_have_struct_lit(&self) -> bool {
-        matches!(self, Self::AngDapatStatement | Self::StructLiteralField)
+        matches!(
+            self,
+            Self::AngDapatStatement | Self::StructLiteralField | Self::IbalikStatement
+        )
     }
 }

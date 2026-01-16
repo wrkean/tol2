@@ -106,7 +106,7 @@ pub enum CompilerError {
         expected: String,
         found: String,
 
-        #[label("Umasa ng `{expected}` pero ito ay `{found}`")]
+        #[label("Ang tipo nito ay `{found}`, dapat sana ay `{expected}`")]
         span: SourceSpan,
     },
 
@@ -140,6 +140,12 @@ pub enum CompilerError {
     #[error("{}", "Tinawag ang hindi natatawag")]
     InvalidCallExpression {
         #[label("Baka hindi ito idineklara bilang isang `paraan`?")]
+        span: SourceSpan,
+    },
+
+    #[error("{}", "Nagbalik sa labas ng paraan".bright_red())]
+    ReturningOutsideFunction {
+        #[label("Hindi pwede ang `ibalik` kung nasa labas ito ng paraan")]
         span: SourceSpan,
     },
 }

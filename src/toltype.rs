@@ -183,7 +183,8 @@ impl fmt::Display for TolType {
 
             TolType::UnsizedInteger => write!(f, "UnsizedInteger"),
             TolType::UnsizedFloat => write!(f, "UnsizedFloat"),
-            _ => panic!("Unrecognized string -> toltype!"),
+            TolType::Void => write!(f, "void"),
+            _ => panic!("Unrecognized string -> toltype!: {self:?}"),
         }
     }
 }

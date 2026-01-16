@@ -113,7 +113,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Paraan { .. } => self.analyze_paraan(stmt),
             StmtKind::Ang { .. } => self.analyze_decl(stmt),
             StmtKind::Dapat { .. } => self.analyze_decl(stmt),
-            StmtKind::Ibalik { .. } => todo!(),
+            StmtKind::Ibalik { .. } => self.analyze_ibalik(stmt),
             StmtKind::Bawat { .. } => todo!(),
             StmtKind::Habang { .. } => todo!(),
             StmtKind::Kung { .. } => todo!(),
@@ -190,6 +190,39 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                 rhs: rhs_type,
             }))
         }
+    }
+
+    fn analyze_ibalik(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let stmt_span = stmt.span();
+        let StmtKind::Ibalik { rhs } = stmt.kind else {
+            unreachable!()
+        };
+
+        if rhs.is_none() && self.analyzer_ctx.cur_fn_return_type() != &TolType::Void {
+            return Err(CompilerError::UnexpectedType2 {
+                expected: self.analyzer_ctx.cur_fn_return_type().to_string(),
+                found: TolType::Void.to_string(),
+                span: stmt_span.into(),
+            });
+        }
+
+        let rhs_span = rhs.as_ref().unwrap().span();
+        let rhs_typex = self.analyze_expression(rhs.unwrap())?;
+        match rhs_typex
+            .ttype
+            .coerce(self.analyzer_ctx.cur_fn_return_type())
+        {
+            Some(_) => {}
+            None => {
+                return Err(CompilerError::UnexpectedType2 {
+                    expected: self.analyzer_ctx.cur_fn_return_type().to_string(),
+                    found: rhs_typex.ttype.to_string(),
+                    span: rhs_span.into(),
+                });
+            }
+        }
+
+        Ok(TypedStmt::new(TypedStmtKind::Ibalik { rhs: rhs_typex }))
     }
 
     fn analyze_block(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {

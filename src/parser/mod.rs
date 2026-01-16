@@ -65,6 +65,7 @@ impl<'a> Parser<'a> {
             TokenKind::Bawat => self.parse_bawat(),
             TokenKind::Habang => self.parse_habang(),
             TokenKind::Kung => self.parse_kung(),
+            TokenKind::Ibalik => self.parse_ibalik(),
             TokenKind::Gagawin => {
                 let start = self.peek().span.start;
                 self.advance();
@@ -270,6 +271,21 @@ impl<'a> Parser<'a> {
 
         Ok(Stmt {
             kind: StmtKind::Kung { branches },
+            span: start..end,
+        })
+    }
+
+    fn parse_ibalik(&mut self) -> Result<Stmt, CompilerError> {
+        let start = self.consume(TokenKind::Ibalik, "`ibalik`")?.span.start;
+        let rhs = if self.peek().kind == TokenKind::Semicolon {
+            None
+        } else {
+            Some(self.parse_expression(0, ExprParseContext::IbalikStatement)?)
+        };
+        let end = consume_stmt_terminator!(self).span.end;
+
+        Ok(Stmt {
+            kind: StmtKind::Ibalik { rhs },
             span: start..end,
         })
     }

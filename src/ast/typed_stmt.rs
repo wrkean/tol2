@@ -22,6 +22,9 @@ pub enum TypedStmtKind {
     Block {
         stmts: Vec<TypedStmt>,
     },
+    Ibalik {
+        rhs: TypedExpr,
+    },
 }
 
 impl TypedStmt {

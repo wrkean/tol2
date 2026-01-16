@@ -48,8 +48,7 @@ pub enum StmtKind {
         rhs: Expr,
     },
     Ibalik {
-        id: Token,
-        // rhs: Expr,
+        rhs: Option<Expr>,
     },
     Bawat {
         bind: Token,
