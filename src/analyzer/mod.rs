@@ -1,3 +1,4 @@
+pub mod analyzer_ctx;
 pub mod symbol;
 
 use std::{
@@ -6,7 +7,10 @@ use std::{
 };
 
 use crate::{
-    analyzer::symbol::{Symbol, SymbolKind},
+    analyzer::{
+        analyzer_ctx::AnalyzerContext,
+        symbol::{Symbol, SymbolKind},
+    },
     ast::{
         Ast, TypedAst,
         expr::{Expr, ExprKind},
@@ -77,24 +81,27 @@ macro_rules! analyze_comparison_helper {
 pub type SymbolId = usize;
 
 pub struct SemanticAnalyzer<'ctx> {
-    ctx: &'ctx mut CompilerCtx,
+    compiler_ctx: &'ctx mut CompilerCtx,
+    analyzer_ctx: AnalyzerContext,
     symbol_ids: Vec<HashMap<String, SymbolId>>,
 }
 
 impl<'ctx> SemanticAnalyzer<'ctx> {
-    pub fn new(ctx: &'ctx mut CompilerCtx) -> Self {
+    pub fn new(compiler_ctx: &'ctx mut CompilerCtx) -> Self {
         Self {
-            ctx,
+            compiler_ctx,
+            analyzer_ctx: AnalyzerContext::new(),
             symbol_ids: vec![HashMap::new()],
         }
     }
 
     pub fn analyze(mut self, ast: Ast) -> TypedAst {
+        // TODO: Declare symbols first then analyze
         let mut typed_ast = Vec::new();
         for stmt in ast {
             match self.analyze_statement(stmt) {
                 Ok(ts) => typed_ast.push(ts),
-                Err(e) => self.ctx.add_error(e),
+                Err(e) => self.compiler_ctx.add_error(e),
             };
         }
 
@@ -103,7 +110,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
 
     pub fn analyze_statement(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
         match &stmt.kind {
-            StmtKind::Paraan { .. } => todo!(),
+            StmtKind::Paraan { .. } => self.analyze_paraan(stmt),
             StmtKind::Ang { .. } => self.analyze_decl(stmt),
             StmtKind::Dapat { .. } => self.analyze_decl(stmt),
             StmtKind::Ibalik { .. } => todo!(),
@@ -114,6 +121,47 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Gagawin => todo!(),
             StmtKind::Null => todo!(),
         }
+    }
+
+    fn analyze_paraan(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let StmtKind::Paraan {
+            id,
+            mut return_type,
+            mut params,
+            block,
+            ..
+        } = stmt.kind
+        else {
+            unreachable!()
+        };
+        // Resolve types
+        for param in params.iter_mut() {
+            param.ttype = self.resolve_type(param.ttype.clone());
+        }
+
+        return_type = self.resolve_type(return_type);
+        let symbol_id = self.declare_symbol(
+            &id,
+            SymbolKind::Func {
+                param_types: params.iter().map(|pi| pi.ttype.clone()).collect(),
+                return_type: return_type.clone(),
+            },
+        )?;
+
+        self.enter_scope();
+        for param in params {
+            self.declare_symbol(&param.id, SymbolKind::Var { ttype: param.ttype })?;
+        }
+
+        self.analyzer_ctx.enter_fn(return_type.clone());
+        let block = self.analyze_block(*block)?;
+        self.analyzer_ctx.exit_fn();
+        self.exit_scope();
+
+        Ok(TypedStmt::new(TypedStmtKind::Paraan {
+            symbol_id,
+            block: Box::new(block),
+        }))
     }
 
     pub fn analyze_decl(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
@@ -142,6 +190,22 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                 rhs: rhs_type,
             }))
         }
+    }
+
+    fn analyze_block(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let StmtKind::Block { stmts } = stmt.kind else {
+            unreachable!()
+        };
+
+        let mut typed_stmts = Vec::new();
+        for stmt in stmts {
+            match self.analyze_statement(stmt) {
+                Ok(ts) => typed_stmts.push(ts),
+                Err(e) => self.compiler_ctx.add_error(e),
+            };
+        }
+
+        Ok(TypedStmt::new(TypedStmtKind::Block { stmts: typed_stmts }))
     }
 
     pub fn analyze_expression(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
@@ -188,7 +252,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         };
 
         let id = self.lookup_symbol(&lexeme)?;
-        let ttype = self.ctx.symbol_table[id].get_type();
+        let ttype = self.compiler_ctx.symbol_table[id].get_type();
         Ok(TypedExpr::new(TypedExprKind::Integer { lexeme }, ttype))
     }
 
@@ -231,7 +295,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             unreachable!()
         };
         let id = self.lookup_symbol_from_expr(callee)?;
-        let sym = self.ctx.symbol_table[id].clone();
+        let sym = self.compiler_ctx.symbol_table[id].clone();
 
         match sym.kind() {
             SymbolKind::Func { param_types, .. } => {
@@ -299,18 +363,20 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         kind: SymbolKind,
     ) -> Result<usize, CompilerError> {
         let last_scope = self.symbol_ids.last_mut().unwrap();
-        let current_id = self.ctx.symbol_table.len();
+        let current_id = self.compiler_ctx.symbol_table.len();
 
         match last_scope.entry(name_tok.lexeme().to_string()) {
             Entry::Vacant(ent) => {
                 ent.insert(current_id);
-                self.ctx
-                    .symbol_table
-                    .push(Symbol::new(name_tok.lexeme(), kind, name_tok.span()));
+                self.compiler_ctx.symbol_table.push(Symbol::new(
+                    name_tok.lexeme(),
+                    kind,
+                    name_tok.span(),
+                ));
                 Ok(current_id)
             }
             Entry::Occupied(ent) => {
-                let occ_sym = &self.ctx.symbol_table[*ent.get()];
+                let occ_sym = &self.compiler_ctx.symbol_table[*ent.get()];
                 Err(CompilerError::Redeclaration {
                     declared_span: occ_sym.span().into(),
                     redeclared_span: name_tok.span().into(),
@@ -336,5 +402,23 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             ExprKind::Identifier { lexeme } => self.lookup_symbol(lexeme),
             _ => panic!("Can't lookup from expression `{:?}`", expr.kind),
         }
+    }
+
+    fn get_id(&self, name: &str) -> Option<usize> {
+        for scope in self.symbol_ids.iter().rev() {
+            if let Some(id) = scope.get(name) {
+                return Some(*id);
+            }
+        }
+
+        None
+    }
+
+    fn enter_scope(&mut self) {
+        self.symbol_ids.push(HashMap::new());
+    }
+
+    fn exit_scope(&mut self) {
+        self.symbol_ids.pop();
     }
 }

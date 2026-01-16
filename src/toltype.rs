@@ -35,6 +35,7 @@ pub enum TolType {
     Void,
     UnsizedInteger,
     UnsizedFloat,
+    Unknown,
 }
 
 impl TolType {

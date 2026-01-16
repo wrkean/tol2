@@ -1,7 +1,3 @@
-paraan ano(x: f64, y: i32) i32 {
-    ang x: i32 = 5;
-    ang y: i32 = ano(53.3, z);
-}
-
-ang y: i32 = ano(5);
-ang z: f64 = y;
+paraan ano(x na i32):
+    ang y na i32 = x
+    ang z na i32 = y

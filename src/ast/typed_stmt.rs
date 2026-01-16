@@ -7,8 +7,21 @@ pub struct TypedStmt {
 
 #[derive(Debug)]
 pub enum TypedStmtKind {
-    Ang { symbol_id: SymbolId, rhs: TypedExpr },
-    Dapat { symbol_id: SymbolId, rhs: TypedExpr },
+    Ang {
+        symbol_id: SymbolId,
+        rhs: TypedExpr,
+    },
+    Dapat {
+        symbol_id: SymbolId,
+        rhs: TypedExpr,
+    },
+    Paraan {
+        symbol_id: SymbolId,
+        block: Box<TypedStmt>,
+    },
+    Block {
+        stmts: Vec<TypedStmt>,
+    },
 }
 
 impl TypedStmt {
