@@ -1,4 +1,4 @@
-use crate::{analyzer::SymbolId, ast::typed_expr::TypedExpr, toltype::TolType};
+use crate::{analyzer::SymbolId, ast::typed_expr::TypedExpr};
 
 #[derive(Debug)]
 pub struct TypedStmt {
@@ -8,6 +8,7 @@ pub struct TypedStmt {
 #[derive(Debug)]
 pub enum TypedStmtKind {
     Ang { symbol_id: SymbolId, rhs: TypedExpr },
+    Dapat { symbol_id: SymbolId, rhs: TypedExpr },
 }
 
 impl TypedStmt {

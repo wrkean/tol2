@@ -104,8 +104,8 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     pub fn analyze_statement(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
         match &stmt.kind {
             StmtKind::Paraan { .. } => todo!(),
-            StmtKind::Ang { .. } => self.analyze_ang(stmt),
-            StmtKind::Dapat { .. } => todo!(),
+            StmtKind::Ang { .. } => self.analyze_decl(stmt),
+            StmtKind::Dapat { .. } => self.analyze_decl(stmt),
             StmtKind::Ibalik { .. } => todo!(),
             StmtKind::Bawat { .. } => todo!(),
             StmtKind::Habang { .. } => todo!(),
@@ -116,9 +116,13 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         }
     }
 
-    pub fn analyze_ang(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
-        let StmtKind::Ang { id, ttype, rhs } = stmt.kind else {
-            unreachable!()
+    pub fn analyze_decl(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let (is_ang, id, ttype, rhs) = {
+            match stmt.kind {
+                StmtKind::Ang { id, ttype, rhs } => (true, id, ttype, rhs),
+                StmtKind::Dapat { id, ttype, rhs } => (false, id, ttype, rhs),
+                _ => unreachable!(),
+            }
         };
 
         let ttype = self.resolve_type(ttype);
@@ -127,10 +131,17 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         ttype.coerce_or_mismatch(&rhs_type.ttype, id.span(), rhs_span)?;
 
         let symbol_id = self.declare_symbol(&id, SymbolKind::Var { ttype })?;
-        Ok(TypedStmt::new(TypedStmtKind::Ang {
-            symbol_id,
-            rhs: rhs_type,
-        }))
+        if is_ang {
+            Ok(TypedStmt::new(TypedStmtKind::Ang {
+                symbol_id,
+                rhs: rhs_type,
+            }))
+        } else {
+            Ok(TypedStmt::new(TypedStmtKind::Dapat {
+                symbol_id,
+                rhs: rhs_type,
+            }))
+        }
     }
 
     pub fn analyze_expression(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
@@ -240,10 +251,10 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                     sym.get_type(),
                 ))
             }
-            SymbolKind::Var { ttype } => {
-                return Err(CompilerError::InvalidCallExpression {
+            SymbolKind::Var { .. } | SymbolKind::ConstVar { .. } => {
+                Err(CompilerError::InvalidCallExpression {
                     span: callee.span().into(),
-                });
+                })
             }
         }
     }

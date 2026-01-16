@@ -7,6 +7,9 @@ pub enum SymbolKind {
     Var {
         ttype: TolType,
     },
+    ConstVar {
+        ttype: TolType,
+    },
     Func {
         param_types: Vec<TolType>,
         return_type: TolType,
@@ -43,11 +46,13 @@ impl Symbol {
 
     /// ```
     /// SymbolKind::Var => ttype.to_owned(),
+    /// SymbolKind::Const => ttype.to_owned(),
     /// SymbolKind::Func => return_type.to_owned(),
     /// ```
     pub fn get_type(&self) -> TolType {
         match self.kind() {
             SymbolKind::Var { ttype } => ttype.to_owned(),
+            SymbolKind::ConstVar { ttype } => ttype.to_owned(),
             SymbolKind::Func { return_type, .. } => return_type.to_owned(),
         }
     }
