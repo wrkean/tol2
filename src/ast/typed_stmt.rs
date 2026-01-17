@@ -30,6 +30,10 @@ pub enum TypedStmtKind {
         bind_type: TolType,
         block: Box<TypedStmt>,
     },
+    Habang {
+        cond: TypedExpr,
+        block: Box<TypedStmt>,
+    },
 }
 
 impl TypedStmt {

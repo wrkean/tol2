@@ -115,7 +115,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Dapat { .. } => self.analyze_decl(stmt),
             StmtKind::Ibalik { .. } => self.analyze_ibalik(stmt),
             StmtKind::Bawat { .. } => self.analyze_bawat(stmt),
-            StmtKind::Habang { .. } => todo!(),
+            StmtKind::Habang { .. } => self.analyze_habang(stmt),
             StmtKind::Kung { .. } => todo!(),
             StmtKind::Block { .. } => todo!(),
             StmtKind::Gagawin => todo!(),
@@ -256,6 +256,31 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         Ok(TypedStmt::new(TypedStmtKind::Bawat {
             iter: iter_typex,
             bind_type,
+            block: Box::new(block),
+        }))
+    }
+
+    fn analyze_habang(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let StmtKind::Habang { cond, block } = stmt.kind else {
+            unreachable!()
+        };
+        let cond_span = cond.span();
+        let cond_typex = self.analyze_expression(cond)?;
+
+        if cond_typex.ttype != TolType::Bool {
+            return Err(CompilerError::UnexpectedType2 {
+                expected: TolType::Bool.to_string(),
+                found: cond_typex.ttype.to_string(),
+                span: cond_span.into(),
+            });
+        }
+
+        self.enter_scope();
+        let block = self.analyze_block(*block)?;
+        self.exit_scope();
+
+        Ok(TypedStmt::new(TypedStmtKind::Habang {
+            cond: cond_typex,
             block: Box::new(block),
         }))
     }
