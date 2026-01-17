@@ -76,16 +76,18 @@ impl<'a> Parser<'a> {
                 self.advance();
                 Ok(Stmt::new_null())
             }
-            TokenKind::LBrace => {
+            TokenKind::Indent => {
                 self.advance();
                 let block = self.parse_block();
-                self.consume(TokenKind::RBrace, "`}`")?;
+                self.consume(TokenKind::Dedent, "dedent")?;
 
                 block
             }
-            _ => Err(CompilerError::InvalidStartOfStatement {
-                span: self.peek().span().into(),
-            }),
+            _ => {
+                println!("Token: {:?}", self.peek());
+                let span = self.advance().span();
+                Err(CompilerError::InvalidStartOfStatement { span: span.into() })
+            }
         }
     }
 
@@ -239,36 +241,42 @@ impl<'a> Parser<'a> {
 
         // Parse initial `kung` statement
         let cond = Some(self.parse_expression(0, ExprParseContext::KungStatement)?);
+        let cond_end = cond.as_ref().unwrap().span.end;
         self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
         self.consume(TokenKind::Indent, "indent")?;
         let block = self.parse_block()?;
         self.consume(TokenKind::Dedent, "dedent")?;
-        branches.push(KungBranch { cond, block });
+        branches.push(KungBranch {
+            cond,
+            block,
+            span: start..cond_end,
+        });
 
         // Parse following `kungdi` brannches
         let mut end = 0;
         while self.peek().kind == TokenKind::Kungdi {
-            self.consume(TokenKind::Kungdi, "`kungdi`")?;
+            let branch_start_span = self.consume(TokenKind::Kungdi, "`kungdi`")?.span();
             let cond = if self.peek().kind != TokenKind::Colon {
                 Some(self.parse_expression(0, ExprParseContext::KungStatement)?)
             } else {
                 None
             };
+            let cond_end = match cond.as_ref() {
+                Some(e) => e.span().end,
+                None => branch_start_span.end,
+            };
             self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
             self.consume(TokenKind::Indent, "indent")?;
             let block = self.parse_block()?;
-            self.consume(TokenKind::Dedent, "dedent")?;
+            end = self.consume(TokenKind::Dedent, "dedent")?.span().end;
 
-            let block_end = block.span.end;
-            let is_done = cond.is_none();
-            branches.push(KungBranch { cond, block });
-
-            if is_done {
-                end = block_end;
-                break;
-            }
+            branches.push(KungBranch {
+                cond,
+                block,
+                span: branch_start_span.start..cond_end,
+            });
         }
 
         Ok(Stmt {

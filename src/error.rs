@@ -148,4 +148,16 @@ pub enum CompilerError {
         #[label("Hindi pwede ang `ibalik` kung nasa labas ito ng paraan")]
         span: SourceSpan,
     },
+
+    #[error("{}", "Umasa expresyon pagkatapos ng `kungdi`".bright_red())]
+    #[help(
+        "Ang `kungdi` na walang kasunod na expresyon ay maaari lamang gamitin kung ito na ang pinakahuling `kungdi`"
+    )]
+    #[help(
+        "Subukan mong lagyan ng expresyon pagkatapos ng `kungdi` kung ito ay hindi pa ang pinakahuling `kungdi`"
+    )]
+    InvalidKungdiBranch {
+        #[label("Dapat na may expresyon ang `kungdi` na ito")]
+        span: SourceSpan,
+    },
 }

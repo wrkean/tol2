@@ -82,4 +82,5 @@ pub struct ParamInfo {
 pub struct KungBranch {
     pub cond: Option<Expr>,
     pub block: Stmt,
+    pub span: Range<usize>,
 }

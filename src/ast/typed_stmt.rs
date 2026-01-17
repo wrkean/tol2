@@ -34,10 +34,19 @@ pub enum TypedStmtKind {
         cond: TypedExpr,
         block: Box<TypedStmt>,
     },
+    Kung {
+        branches: Vec<TypedKungBranches>,
+    },
 }
 
 impl TypedStmt {
     pub fn new(kind: TypedStmtKind) -> Self {
         Self { kind }
     }
+}
+
+#[derive(Debug)]
+pub struct TypedKungBranches {
+    pub cond: Option<TypedExpr>,
+    pub block: Box<TypedStmt>,
 }

@@ -16,7 +16,7 @@ use crate::{
         expr::{Expr, ExprKind},
         stmt::{Stmt, StmtKind},
         typed_expr::{TypedExpr, TypedExprKind},
-        typed_stmt::{TypedStmt, TypedStmtKind},
+        typed_stmt::{TypedKungBranches, TypedStmt, TypedStmtKind},
     },
     compiler::CompilerCtx,
     error::CompilerError,
@@ -116,8 +116,14 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Ibalik { .. } => self.analyze_ibalik(stmt),
             StmtKind::Bawat { .. } => self.analyze_bawat(stmt),
             StmtKind::Habang { .. } => self.analyze_habang(stmt),
-            StmtKind::Kung { .. } => todo!(),
-            StmtKind::Block { .. } => todo!(),
+            StmtKind::Kung { .. } => self.analyze_kung(stmt),
+            StmtKind::Block { .. } => {
+                self.enter_scope();
+                let stmt = self.analyze_block(stmt);
+                self.exit_scope();
+
+                stmt
+            }
             StmtKind::Gagawin => todo!(),
             StmtKind::Null => todo!(),
         }
@@ -282,6 +288,52 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         Ok(TypedStmt::new(TypedStmtKind::Habang {
             cond: cond_typex,
             block: Box::new(block),
+        }))
+    }
+
+    fn analyze_kung(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let StmtKind::Kung { branches } = stmt.kind else {
+            unreachable!()
+        };
+
+        let mut typed_kung_branches = Vec::new();
+        let branches_len = branches.len();
+        for (i, branch) in branches.into_iter().enumerate() {
+            let cond_typex = match branch.cond {
+                Some(e) => {
+                    let cond_span = e.span();
+                    let cond_typex = self.analyze_expression(e)?;
+                    if cond_typex.ttype != TolType::Bool {
+                        return Err(CompilerError::UnexpectedType2 {
+                            expected: TolType::Bool.to_string(),
+                            found: cond_typex.ttype.to_string(),
+                            span: cond_span.into(),
+                        });
+                    }
+
+                    Some(cond_typex)
+                }
+                None => {
+                    if branches_len - 1 != i {
+                        return Err(CompilerError::InvalidKungdiBranch {
+                            span: branch.span.into(),
+                        });
+                    }
+
+                    None
+                }
+            };
+            self.enter_scope();
+            let block = self.analyze_block(branch.block)?;
+            self.exit_scope();
+            typed_kung_branches.push(TypedKungBranches {
+                cond: cond_typex,
+                block: Box::new(block),
+            })
+        }
+
+        Ok(TypedStmt::new(TypedStmtKind::Kung {
+            branches: typed_kung_branches,
         }))
     }
 
