@@ -187,7 +187,9 @@ impl<'a> Parser<'a> {
         Ok(params)
     }
 
+    #[allow(unreachable_code)]
     fn parse_bawat(&mut self) -> Result<Stmt, CompilerError> {
+        todo!("Hindi pa sinusuportahan ng linggwahe ang `bawat`");
         let start = self.consume(TokenKind::Bawat, "`bawat`")?.span.start;
 
         let bind = self

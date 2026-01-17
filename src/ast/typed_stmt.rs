@@ -1,4 +1,4 @@
-use crate::{analyzer::SymbolId, ast::typed_expr::TypedExpr};
+use crate::{analyzer::SymbolId, ast::typed_expr::TypedExpr, toltype::TolType};
 
 #[derive(Debug)]
 pub struct TypedStmt {
@@ -24,6 +24,11 @@ pub enum TypedStmtKind {
     },
     Ibalik {
         rhs: TypedExpr,
+    },
+    Bawat {
+        iter: TypedExpr,
+        bind_type: TolType,
+        block: Box<TypedStmt>,
     },
 }
 

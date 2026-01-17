@@ -114,7 +114,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Ang { .. } => self.analyze_decl(stmt),
             StmtKind::Dapat { .. } => self.analyze_decl(stmt),
             StmtKind::Ibalik { .. } => self.analyze_ibalik(stmt),
-            StmtKind::Bawat { .. } => todo!(),
+            StmtKind::Bawat { .. } => self.analyze_bawat(stmt),
             StmtKind::Habang { .. } => todo!(),
             StmtKind::Kung { .. } => todo!(),
             StmtKind::Block { .. } => todo!(),
@@ -230,6 +230,34 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         }
 
         Ok(TypedStmt::new(TypedStmtKind::Ibalik { rhs: rhs_typex }))
+    }
+
+    fn analyze_bawat(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
+        let StmtKind::Bawat { bind, iter, block } = stmt.kind else {
+            unreachable!()
+        };
+
+        self.enter_scope();
+        let iter_typex = self.analyze_expression(iter)?;
+        let bind_type = iter_typex.ttype.clone();
+        self.declare_symbol(
+            &bind,
+            SymbolKind::Var {
+                ttype: bind_type.clone(),
+            },
+        )?;
+
+        self.enter_scope();
+        let block = self.analyze_block(*block)?;
+        self.exit_scope();
+
+        self.exit_scope();
+
+        Ok(TypedStmt::new(TypedStmtKind::Bawat {
+            iter: iter_typex,
+            bind_type,
+            block: Box::new(block),
+        }))
     }
 
     fn analyze_block(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
