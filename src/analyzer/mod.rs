@@ -178,7 +178,14 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         let rhs_type = self.analyze_expression(rhs)?;
         ttype.coerce_or_mismatch(&rhs_type.ttype, id.span(), rhs_span)?;
 
-        let symbol_id = self.declare_symbol(&id, SymbolKind::Var { ttype })?;
+        let symbol_id = self.declare_symbol(
+            &id,
+            if is_ang {
+                SymbolKind::Var { ttype }
+            } else {
+                SymbolKind::ConstVar { ttype }
+            },
+        )?;
         if is_ang {
             Ok(TypedStmt::new(TypedStmtKind::Ang {
                 symbol_id,
