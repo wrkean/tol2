@@ -1,11 +1,11 @@
-use crate::{ctype::CType, product::expr::CExpr};
+use crate::ctype::CType;
 
 pub enum CStatement {
     Declaration {
         modifier: Option<String>,
         ttype: CType,
         name: String,
-        rhs: Option<CExpr>,
+        rhs: Option<String>,
     },
     Function {
         modifiers: Vec<String>,
@@ -34,7 +34,7 @@ impl CStatement {
                     ttype,
                     modifier.map_or("".to_string(), |s| s.to_string() + " "),
                     name,
-                    rhs.map_or(";".to_string(), |e| format!(" = {};", e.produce_c()))
+                    rhs.map_or(";".to_string(), |e| format!(" = {};", e))
                 )
             }
             Self::Function {

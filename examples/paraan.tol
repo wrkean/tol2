@@ -1,5 +1,3 @@
 paraan ano(x na i32):
     ang y na i32 = x
     ang z na i32 = y
-
-    ibalik 25.2

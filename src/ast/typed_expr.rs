@@ -1,8 +1,4 @@
-use crate::{
-    ast::expr::{Expr, StructLiteralField},
-    lexer::token::Token,
-    toltype::TolType,
-};
+use crate::{ast::expr::StructLiteralField, lexer::token::Token, toltype::TolType};
 
 #[derive(Debug)]
 pub struct TypedExpr {
@@ -71,7 +67,7 @@ pub enum TypedExprKind {
         right: Box<TypedExpr>,
     },
     FnCall {
-        callee: Expr,
+        callee: Box<TypedExpr>,
         args: Vec<TypedExpr>,
     },
     StructLiteral {

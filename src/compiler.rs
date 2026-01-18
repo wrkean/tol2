@@ -1,5 +1,8 @@
+use gen_c::CCodeGen;
+
 use crate::{
     analyzer::{SemanticAnalyzer, symbol::Symbol},
+    codegen::Codegen,
     driver::CompilerOptions,
     error::CompilerError,
     lexer::Lexer,
@@ -80,6 +83,9 @@ impl<'com> Compiler<'com> {
         let typed_ast = analyzer.analyze(ast);
         println!("{:#?}", typed_ast);
         println!("{:#?}", ctx.symbol_table);
+
+        let codegen = Codegen::new(&typed_ast, &ctx.symbol_table);
+        println!("{}", codegen.generate_c(CCodeGen::new()));
 
         ctx
     }

@@ -1,13 +1,10 @@
-use crate::{
-    ctype::CType,
-    product::{expr::CExpr, statement::CStatement},
-};
+use crate::{ctype::CType, product::statement::CStatement};
 
 pub struct DeclBuilder {
     modifier: Option<String>,
     ttype: CType,
     name: String,
-    rhs: Option<CExpr>,
+    rhs: Option<String>,
 }
 
 impl DeclBuilder {
@@ -20,7 +17,7 @@ impl DeclBuilder {
         }
     }
 
-    pub fn with_rhs(mut self, rhs: CExpr) -> Self {
+    pub fn with_rhs(mut self, rhs: String) -> Self {
         self.rhs = Some(rhs);
 
         self

@@ -151,8 +151,13 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         )?;
 
         self.enter_scope();
-        for param in params {
-            self.declare_symbol(&param.id, SymbolKind::Var { ttype: param.ttype })?;
+        for param in params.iter() {
+            self.declare_symbol(
+                &param.id,
+                SymbolKind::Var {
+                    ttype: param.ttype.clone(),
+                },
+            )?;
         }
 
         self.analyzer_ctx.enter_fn(return_type.clone());
@@ -161,6 +166,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         self.exit_scope();
 
         Ok(TypedStmt::new(TypedStmtKind::Paraan {
+            params,
             symbol_id,
             block: Box::new(block),
         }))
@@ -437,6 +443,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         };
         let id = self.lookup_symbol_from_expr(callee)?;
         let sym = self.compiler_ctx.symbol_table[id].clone();
+        let callee_typex = self.analyze_expression(callee.as_ref().clone())?;
 
         match sym.kind() {
             SymbolKind::Func { param_types, .. } => {
@@ -450,7 +457,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
 
                 Ok(TypedExpr::new(
                     TypedExprKind::FnCall {
-                        callee: *callee.clone(),
+                        callee: Box::new(callee_typex),
                         args: arg_types,
                     },
                     sym.get_type(),

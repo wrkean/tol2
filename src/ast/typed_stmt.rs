@@ -1,4 +1,8 @@
-use crate::{analyzer::SymbolId, ast::typed_expr::TypedExpr, toltype::TolType};
+use crate::{
+    analyzer::SymbolId,
+    ast::{stmt::ParamInfo, typed_expr::TypedExpr},
+    toltype::TolType,
+};
 
 #[derive(Debug)]
 pub struct TypedStmt {
@@ -16,6 +20,7 @@ pub enum TypedStmtKind {
         rhs: TypedExpr,
     },
     Paraan {
+        params: Vec<ParamInfo>,
         symbol_id: SymbolId,
         block: Box<TypedStmt>,
     },

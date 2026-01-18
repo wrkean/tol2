@@ -11,8 +11,11 @@ pub enum CType {
     U32,
     U64,
     Size, // size_t
+    Float,
+    Double,
     Bool,
     Char,
+    Void,
     Custom(String),
 }
 
@@ -29,8 +32,11 @@ impl fmt::Display for CType {
             CType::U32 => write!(f, "uint32_t"),
             CType::U64 => write!(f, "uint64_t"),
             CType::Size => write!(f, "size_t"),
+            CType::Float => write!(f, "float"),
+            CType::Double => write!(f, "double"),
             CType::Bool => write!(f, "bool"),
             CType::Char => write!(f, "char"),
+            CType::Void => write!(f, "void"),
             CType::Custom(s) => write!(f, "{s}"),
         }
     }
