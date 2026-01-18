@@ -48,7 +48,8 @@ pub enum CompilerError {
 
     #[error("{}", "Maling pagumpisa ng pahayag".bright_red())]
     InvalidStartOfStatement {
-        #[label("Hindi ito pwede magumpisa ng pahayag")]
+        found: String,
+        #[label("Hindi pwede magumpisa ng pahayag ang `{found}`")]
         span: SourceSpan,
     },
 
@@ -107,6 +108,12 @@ pub enum CompilerError {
         found: String,
 
         #[label("Ang tipo nito ay `{found}`, dapat sana ay `{expected}`")]
+        span: SourceSpan,
+    },
+
+    #[error("{}", "Maling pag-indent".bright_red())]
+    InvalidIndent {
+        #[label("hindi maaaring mag-indent dito")]
         span: SourceSpan,
     },
 

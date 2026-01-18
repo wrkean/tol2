@@ -63,6 +63,7 @@ pub enum StmtKind {
         branches: Vec<KungBranch>,
     },
     Block {
+        indent_span: Range<usize>,
         stmts: Vec<Stmt>,
     },
     Gagawin,

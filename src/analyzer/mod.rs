@@ -117,13 +117,9 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             StmtKind::Bawat { .. } => self.analyze_bawat(stmt),
             StmtKind::Habang { .. } => self.analyze_habang(stmt),
             StmtKind::Kung { .. } => self.analyze_kung(stmt),
-            StmtKind::Block { .. } => {
-                self.enter_scope();
-                let stmt = self.analyze_block(stmt);
-                self.exit_scope();
-
-                stmt
-            }
+            StmtKind::Block { indent_span, .. } => Err(CompilerError::InvalidIndent {
+                span: indent_span.clone().into(),
+            }),
             StmtKind::Gagawin => todo!(),
             StmtKind::Null => todo!(),
         }
@@ -338,7 +334,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     }
 
     fn analyze_block(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
-        let StmtKind::Block { stmts } = stmt.kind else {
+        let StmtKind::Block { stmts, .. } = stmt.kind else {
             unreachable!()
         };
 

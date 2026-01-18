@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use bitflags::bitflags;
 
 use crate::{
@@ -77,16 +79,19 @@ impl<'a> Parser<'a> {
                 Ok(Stmt::new_null())
             }
             TokenKind::Indent => {
-                self.advance();
-                let block = self.parse_block();
+                let indent_span = self.advance().span();
+                let block = self.parse_block(indent_span);
                 self.consume(TokenKind::Dedent, "dedent")?;
 
                 block
             }
             _ => {
-                println!("Token: {:?}", self.peek());
-                let span = self.advance().span();
-                Err(CompilerError::InvalidStartOfStatement { span: span.into() })
+                let found = self.peek().lexeme().to_string();
+                let span = self.peek().span();
+                Err(CompilerError::InvalidStartOfStatement {
+                    found,
+                    span: span.into(),
+                })
             }
         }
     }
@@ -141,8 +146,8 @@ impl<'a> Parser<'a> {
         };
         self.consume(TokenKind::Colon, "`:`")?;
 
-        self.consume(TokenKind::Indent, "indent")?;
-        let block = self.parse_block()?;
+        let indent_span = self.consume(TokenKind::Indent, "indent")?.span();
+        let block = self.parse_block(indent_span)?;
         let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
@@ -201,8 +206,8 @@ impl<'a> Parser<'a> {
         let iter_expr = self.parse_expression(0, ExprParseContext::BawatStatement)?;
         self.consume(TokenKind::Colon, "`:`")?;
 
-        self.consume(TokenKind::Indent, "indent")?;
-        let block = self.parse_block()?;
+        let indent_span = self.consume(TokenKind::Indent, "indent")?.span();
+        let block = self.parse_block(indent_span)?;
         let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
@@ -221,8 +226,8 @@ impl<'a> Parser<'a> {
         let cond = self.parse_expression(0, ExprParseContext::HabangStatement)?;
         self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-        self.consume(TokenKind::Indent, "indent")?;
-        let block = self.parse_block()?;
+        let indent_span = self.consume(TokenKind::Indent, "indent")?.span();
+        let block = self.parse_block(indent_span)?;
         let end = self.consume(TokenKind::Dedent, "dedent")?.span.end;
 
         Ok(Stmt {
@@ -244,8 +249,8 @@ impl<'a> Parser<'a> {
         let cond_end = cond.as_ref().unwrap().span.end;
         self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-        self.consume(TokenKind::Indent, "indent")?;
-        let block = self.parse_block()?;
+        let indent_span = self.consume(TokenKind::Indent, "indent")?.span();
+        let block = self.parse_block(indent_span)?;
         self.consume(TokenKind::Dedent, "dedent")?;
         branches.push(KungBranch {
             cond,
@@ -268,8 +273,8 @@ impl<'a> Parser<'a> {
             };
             self.consume(TokenKind::Colon, "`:` pagkatapos ng expresyon")?;
 
-            self.consume(TokenKind::Indent, "indent")?;
-            let block = self.parse_block()?;
+            let indent_span = self.consume(TokenKind::Indent, "indent")?.span();
+            let block = self.parse_block(indent_span)?;
             end = self.consume(TokenKind::Dedent, "dedent")?.span().end;
 
             branches.push(KungBranch {
@@ -300,7 +305,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_block(&mut self) -> Result<Stmt, CompilerError> {
+    fn parse_block(&mut self, indent_span: Range<usize>) -> Result<Stmt, CompilerError> {
         let mut stmts = Vec::new();
         let start = self.peek().span.start;
 
@@ -320,7 +325,7 @@ impl<'a> Parser<'a> {
         }
 
         Ok(Stmt {
-            kind: StmtKind::Block { stmts },
+            kind: StmtKind::Block { indent_span, stmts },
             span: start..self.previous().span.end,
         })
     }
