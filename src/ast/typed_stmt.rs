@@ -28,7 +28,7 @@ pub enum TypedStmtKind {
         stmts: Vec<TypedStmt>,
     },
     Ibalik {
-        rhs: TypedExpr,
+        rhs: Option<TypedExpr>,
     },
     Bawat {
         iter: TypedExpr,

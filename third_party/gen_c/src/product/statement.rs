@@ -17,6 +17,9 @@ pub enum CStatement {
     Block {
         statements: Vec<CStatement>,
     },
+    Return {
+        rhs: Option<String>,
+    },
 }
 
 impl CStatement {
@@ -86,6 +89,11 @@ impl CStatement {
                     .collect::<Vec<_>>()
                     .join("\n"),
                 " ".repeat(indent)
+            ),
+            Self::Return { rhs } => format!(
+                "{}return {};",
+                " ".repeat(indent),
+                rhs.unwrap_or("".to_string())
             ),
         }
     }

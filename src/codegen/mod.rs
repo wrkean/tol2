@@ -4,6 +4,7 @@ use gen_c::{
         block_builder::BlockBuilder,
         decl_builder::{ConstKind, DeclBuilder},
         function_builder::FunctionBuilder,
+        return_builder::ReturnBuilder,
     },
     ctype::CType,
     product::statement::CStatement,
@@ -48,7 +49,7 @@ impl<'a> Codegen<'a> {
             TypedStmtKind::Ang { .. } | TypedStmtKind::Dapat { .. } => self.gen_decl(stmt),
             TypedStmtKind::Paraan { .. } => self.gen_paraan(stmt),
             TypedStmtKind::Block { .. } => self.gen_block(stmt),
-            TypedStmtKind::Ibalik { .. } => todo!(),
+            TypedStmtKind::Ibalik { .. } => self.gen_ibalik(stmt),
             TypedStmtKind::Bawat { .. } => todo!(),
             TypedStmtKind::Habang { .. } => todo!(),
             TypedStmtKind::Kung { .. } => todo!(),
@@ -119,6 +120,19 @@ impl<'a> Codegen<'a> {
         }
 
         block.build()
+    }
+
+    fn gen_ibalik(&self, stmt: &TypedStmt) -> CStatement {
+        let TypedStmtKind::Ibalik { rhs } = &stmt.kind else {
+            unreachable!()
+        };
+
+        let mut builder = ReturnBuilder::new();
+        if let Some(tex) = rhs {
+            builder = builder.with_rhs(self.gen_expr(tex));
+        }
+
+        builder.build()
     }
 
     fn gen_expr(&self, expr: &TypedExpr) -> String {

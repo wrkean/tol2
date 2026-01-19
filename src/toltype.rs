@@ -82,8 +82,8 @@ impl TolType {
             (USize, UnsizedInteger) | (UnsizedInteger, USize) => Some(USize),
 
             // unsized float
-            (F32, UnsizedFloat) => Some(F32),
-            (F64, UnsizedFloat) => Some(F64),
+            (F32, UnsizedFloat) | (UnsizedFloat, F32) => Some(F32),
+            (F64, UnsizedFloat) | (UnsizedFloat, F64) => Some(F64),
 
             _ => None,
         }
