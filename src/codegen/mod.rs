@@ -5,6 +5,7 @@ use gen_c::{
         decl_builder::{ConstKind, DeclBuilder},
         function_builder::FunctionBuilder,
         return_builder::ReturnBuilder,
+        while_builder::WhileBuilder,
     },
     ctype::CType,
     product::statement::CStatement,
@@ -50,8 +51,8 @@ impl<'a> Codegen<'a> {
             TypedStmtKind::Paraan { .. } => self.gen_paraan(stmt),
             TypedStmtKind::Block { .. } => self.gen_block(stmt),
             TypedStmtKind::Ibalik { .. } => self.gen_ibalik(stmt),
-            TypedStmtKind::Bawat { .. } => todo!(),
-            TypedStmtKind::Habang { .. } => todo!(),
+            TypedStmtKind::Bawat { .. } => self.gen_bawat(stmt),
+            TypedStmtKind::Habang { .. } => self.gen_habang(stmt),
             TypedStmtKind::Kung { .. } => todo!(),
         }
     }
@@ -135,12 +136,37 @@ impl<'a> Codegen<'a> {
         builder.build()
     }
 
+    fn gen_bawat(&self, stmt: &TypedStmt) -> CStatement {
+        let TypedStmtKind::Bawat {
+            iter,
+            bind_type,
+            block,
+        } = &stmt.kind
+        else {
+            unreachable!()
+        };
+
+        todo!("`bawat` statement does not work for now")
+    }
+
+    fn gen_habang(&self, stmt: &TypedStmt) -> CStatement {
+        let TypedStmtKind::Habang { cond, block } = &stmt.kind else {
+            unreachable!()
+        };
+
+        WhileBuilder::new(self.gen_expr(cond), self.gen_block(block)).build()
+    }
+
     fn gen_expr(&self, expr: &TypedExpr) -> String {
         match &expr.kind {
             TypedExprKind::Integer { lexeme }
             | TypedExprKind::Float { lexeme }
-            | TypedExprKind::Bool { lexeme }
             | TypedExprKind::Identifier { lexeme } => lexeme.lexeme.clone(),
+            TypedExprKind::Bool { lexeme } => match lexeme.lexeme() {
+                "tama" => "true".to_string(),
+                "mali" => "mali".to_string(),
+                _ => unreachable!(),
+            },
             TypedExprKind::Add { left, right } => {
                 format!("({} + {})", self.gen_expr(left), self.gen_expr(right))
             }

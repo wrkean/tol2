@@ -20,6 +20,10 @@ pub enum CStatement {
     Return {
         rhs: Option<String>,
     },
+    While {
+        cond: String,
+        body: Box<CStatement>,
+    },
 }
 
 impl CStatement {
@@ -95,6 +99,16 @@ impl CStatement {
                 " ".repeat(indent),
                 rhs.unwrap_or("".to_string())
             ),
+
+            Self::While { cond, body } => {
+                format!(
+                    "{}while ({})
+{}",
+                    " ".repeat(indent),
+                    cond,
+                    body.produce_c(indent)
+                )
+            }
         }
     }
 }
