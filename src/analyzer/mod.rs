@@ -26,60 +26,6 @@ use crate::{
     toltype::TolType,
 };
 
-macro_rules! analyze_arithmetic_helper {
-    ($analyzer:expr, $left:expr, $right:expr, $kind:ident) => {{
-        let left_span = $left.span();
-        let right_span = $right.span();
-        let left_ex = $analyzer.analyze_expression(*$left)?;
-        let right_ex = $analyzer.analyze_expression(*$right)?;
-        let coerced_type =
-            left_ex
-                .ttype
-                .coerce_or_mismatch(&right_ex.ttype, left_span, right_span)?;
-
-        Ok(TypedExpr::new(
-            TypedExprKind::$kind {
-                left: Box::new(left_ex),
-                right: Box::new(right_ex),
-            },
-            coerced_type,
-        ))
-    }};
-}
-
-macro_rules! analyze_comparison_helper {
-    ($analyzer:expr, $left:expr, $right:expr, $kind:ident) => {{
-        let left_span = $left.span();
-        let right_span = $right.span();
-        let left_ex = $analyzer.analyze_expression(*$left)?;
-        let right_ex = $analyzer.analyze_expression(*$right)?;
-
-        if !left_ex.ttype.is_numeric() {
-            return Err(CompilerError::UnexpectedType2 {
-                expected: "numero".to_string(),
-                found: left_ex.ttype.to_string(),
-                span: left_span.into(),
-            });
-        }
-
-        if !right_ex.ttype.is_numeric() {
-            return Err(CompilerError::UnexpectedType2 {
-                expected: "numero".to_string(),
-                found: right_ex.ttype.to_string(),
-                span: right_span.into(),
-            });
-        }
-
-        Ok(TypedExpr::new(
-            TypedExprKind::$kind {
-                left: Box::new(left_ex),
-                right: Box::new(right_ex),
-            },
-            TolType::Bool,
-        ))
-    }};
-}
-
 pub type SymbolId = usize;
 
 pub struct SemanticAnalyzer<'ctx> {
@@ -395,18 +341,10 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
 
         let id = self.lookup_symbol(&lexeme)?;
         let ttype = self.compiler_ctx.symbol_table[id].get_type();
-        Ok(TypedExpr::new(TypedExprKind::Integer { lexeme }, ttype))
+        Ok(TypedExpr::new(TypedExprKind::Identifier { lexeme }, ttype))
     }
 
     fn analyze_binary(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
-        // match expr.kind {
-        //     ExprKind::Add { left, right } => analyze_arithmetic_helper!(self, left, right, Add),
-        //     ExprKind::Sub { left, right } => analyze_arithmetic_helper!(self, left, right, Sub),
-        //     ExprKind::Mult { left, right } => analyze_arithmetic_helper!(self, left, right, Mult),
-        //     ExprKind::Div { left, right } => analyze_arithmetic_helper!(self, left, right, Div),
-        //     _ => unreachable!(),
-        // }
-        //
         let ExprKind::Binary { left, right, op } = expr.kind else {
             unreachable!()
         };
@@ -707,16 +645,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             _ => panic!("Can't lookup from expression `{:?}`", expr.kind),
         }
     }
-
-    // fn get_id(&self, name: &str) -> Option<usize> {
-    //     for scope in self.symbol_ids.iter().rev() {
-    //         if let Some(id) = scope.get(name) {
-    //             return Some(*id);
-    //         }
-    //     }
-    //
-    //     None
-    // }
 
     fn enter_scope(&mut self) {
         self.symbol_ids.push(HashMap::new());
