@@ -90,6 +90,9 @@ pub enum TokenKind {
     #[keyword]
     Na,
 
+    #[keyword]
+    Hindi,
+
     // Operators
     Plus,
     Minus,

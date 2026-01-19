@@ -48,6 +48,7 @@ pub fn get_infix_op(kind: &TokenKind) -> TolOp {
 pub fn get_prefix_op(kind: &TokenKind) -> TolOp {
     match kind {
         TokenKind::Minus => TolOp::new(Right, 3),
+        TokenKind::Hindi => TolOp::new(Right, 10),
         _ => TolOp::new(Right, 0),
     }
 }

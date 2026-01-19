@@ -2,12 +2,12 @@ paraan ano(x na i32) -> f64:
     ang y na i32 = x
     ang z na i32 = y
 
-    kung 2 == 4:
+    kung hindi tama:
         ang x na i32 = y
     kungdi y == z:
         ang z na f32 = 2.2
 
     ibalik 6.7
 
-paraan call():
-    ang x na f64 = ano(5, 2)
+-- paraan call():
+--     ang x na f64 = ano(5, 2)

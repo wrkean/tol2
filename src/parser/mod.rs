@@ -474,6 +474,20 @@ impl<'a> Parser<'a> {
 
                 Ok(expr)
             }
+            TokenKind::Hindi => {
+                self.advance();
+                let prec = operators::get_prefix_op(&TokenKind::Hindi);
+                let rhs =
+                    self.parse_expression(prec.precedence(), ExprParseContext::InExpression)?;
+                let end = rhs.span.end;
+
+                Ok(Expr {
+                    kind: ExprKind::UnaryNot {
+                        right: Box::new(rhs),
+                    },
+                    span: current_tok_span.start..end,
+                })
+            }
             _ => todo!(),
         }
     }

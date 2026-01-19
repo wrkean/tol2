@@ -74,4 +74,7 @@ pub enum TypedExprKind {
         left: Box<TypedExpr>,
         fields: Vec<StructLiteralField>,
     },
+    UnaryNot {
+        right: Box<TypedExpr>,
+    },
 }

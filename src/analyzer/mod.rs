@@ -364,27 +364,20 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     }
 
     pub fn analyze_expression(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
-        match &expr.kind {
+        match expr.kind {
             ExprKind::Integer { lexeme } => Ok(TypedExpr::new(
-                TypedExprKind::Integer {
-                    lexeme: lexeme.to_owned(),
-                },
+                TypedExprKind::Integer { lexeme },
                 TolType::UnsizedInteger,
             )),
             ExprKind::Float { lexeme } => Ok(TypedExpr::new(
-                TypedExprKind::Float {
-                    lexeme: lexeme.to_owned(),
-                },
+                TypedExprKind::Float { lexeme },
                 TolType::UnsizedFloat,
             )),
             ExprKind::Boolean { lexeme } => Ok(TypedExpr::new(
-                TypedExprKind::Bool {
-                    lexeme: lexeme.to_owned(),
-                },
+                TypedExprKind::Bool { lexeme },
                 TolType::Bool,
             )),
             ExprKind::Identifier { .. } => self.analyze_identifier(expr),
-            // TODO: Next, analyze arithmetic
             ExprKind::Add { .. }
             | ExprKind::Sub { .. }
             | ExprKind::Mult { .. }
@@ -398,6 +391,25 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             ExprKind::FnCall { .. } => self.analyze_fncall(expr),
             ExprKind::StructLiteral { .. } => todo!(),
             ExprKind::Dummy => todo!(),
+            ExprKind::UnaryNot { right } => {
+                let right_span = right.span();
+                let right_typex = self.analyze_expression(*right)?;
+
+                if right_typex.ttype != TolType::Bool {
+                    return Err(CompilerError::UnexpectedType2 {
+                        expected: TolType::Bool.to_string(),
+                        found: right_typex.ttype.to_string(),
+                        span: right_span.into(),
+                    });
+                }
+
+                Ok(TypedExpr::new(
+                    TypedExprKind::UnaryNot {
+                        right: Box::new(right_typex),
+                    },
+                    TolType::Bool,
+                ))
+            }
         }
     }
 

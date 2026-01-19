@@ -235,6 +235,7 @@ impl<'a> Codegen<'a> {
                 )
             }
             TypedExprKind::StructLiteral { .. } => todo!(),
+            TypedExprKind::UnaryNot { right } => format!("(!{})", self.gen_expr(right)),
         }
     }
 
