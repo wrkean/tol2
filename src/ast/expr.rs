@@ -67,6 +67,9 @@ pub enum ExprKind {
         args: Vec<Expr>,
         args_span: Range<usize>,
     },
+    UnaryMinus {
+        right: Box<Expr>,
+    },
     UnaryNot {
         right: Box<Expr>,
     },
@@ -120,6 +123,7 @@ impl fmt::Display for Expr {
             ExprKind::GreaterEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::LessEqual { left, right } => write!(f, "(!= {} {})", left, right),
             ExprKind::FnCall { callee, args, .. } => write!(f, "{}({:#?})", callee, args),
+            ExprKind::UnaryMinus { right } => write!(f, "-{}", right),
             ExprKind::UnaryNot { right } => write!(f, "!{}", right),
             ExprKind::Dummy => write!(f, "<dummy>"),
             ExprKind::StructLiteral { left, fields } => write!(f, "{} {{ {:#?} }}", left, fields),

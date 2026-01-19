@@ -6,6 +6,8 @@ use std::{
     ops::Range,
 };
 
+use miette::LabeledSpan;
+
 use crate::{
     analyzer::{
         analyzer_ctx::AnalyzerContext,
@@ -409,6 +411,37 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                     },
                     TolType::Bool,
                 ))
+            }
+            ExprKind::UnaryMinus { right } => {
+                let right_span = right.span();
+                let right_typex = self.analyze_expression(*right)?;
+
+                if let Some(t) = TolType::UnsizedInteger.coerce(&right_typex.ttype) {
+                    Ok(TypedExpr::new(
+                        TypedExprKind::UnaryMinus {
+                            right: Box::new(right_typex),
+                        },
+                        t,
+                    ))
+                } else if let Some(t) = TolType::UnsizedFloat.coerce(&right_typex.ttype) {
+                    Ok(TypedExpr::new(
+                        TypedExprKind::UnaryMinus {
+                            right: Box::new(right_typex),
+                        },
+                        t,
+                    ))
+                } else {
+                    Err(CompilerError::InvalidExpression {
+                        spans: vec![LabeledSpan::new(
+                            Some("Umaasa ng numerikong expresyon".to_string()),
+                            right_span.start,
+                            right_span.end - right_span.start,
+                        )],
+                        help: Some(
+                            "Ang nasa kanan ng `!` ay maaari lamang na numeriko (e.g. 1, 2, 3, ...)".to_string(),
+                        ),
+                    })
+                }
             }
         }
     }

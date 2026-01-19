@@ -474,11 +474,23 @@ impl<'a> Parser<'a> {
 
                 Ok(expr)
             }
+            TokenKind::Minus => {
+                self.advance();
+                let prec = operators::get_prefix_op(&TokenKind::Minus).precedence();
+                let rhs = self.parse_expression(prec, ExprParseContext::InExpression)?;
+                let end = rhs.span().end;
+
+                Ok(Expr {
+                    kind: ExprKind::UnaryMinus {
+                        right: Box::new(rhs),
+                    },
+                    span: current_tok_span.start..end,
+                })
+            }
             TokenKind::Hindi => {
                 self.advance();
-                let prec = operators::get_prefix_op(&TokenKind::Hindi);
-                let rhs =
-                    self.parse_expression(prec.precedence(), ExprParseContext::InExpression)?;
+                let prec = operators::get_prefix_op(&TokenKind::Hindi).precedence();
+                let rhs = self.parse_expression(prec, ExprParseContext::InExpression)?;
                 let end = rhs.span.end;
 
                 Ok(Expr {
