@@ -4,6 +4,7 @@ use gen_c::{
         block_builder::BlockBuilder,
         decl_builder::{ConstKind, DeclBuilder},
         function_builder::FunctionBuilder,
+        if_builder::IfBuilder,
         return_builder::ReturnBuilder,
         while_builder::WhileBuilder,
     },
@@ -20,12 +21,6 @@ use crate::{
     },
     toltype::TolType,
 };
-
-// macro_rules! binary_gen {
-//     ($codegen:expr, $left:expr, $right:expr, $kind:expr) => {
-//         format!("({} {} {})", $codegen.gen_expr($left), $op, $codegen.gen_expr($right))
-//     };
-// }
 
 pub struct Codegen<'a> {
     ast: &'a TypedAst,
@@ -53,7 +48,7 @@ impl<'a> Codegen<'a> {
             TypedStmtKind::Ibalik { .. } => self.gen_ibalik(stmt),
             TypedStmtKind::Bawat { .. } => self.gen_bawat(stmt),
             TypedStmtKind::Habang { .. } => self.gen_habang(stmt),
-            TypedStmtKind::Kung { .. } => todo!(),
+            TypedStmtKind::Kung { .. } => self.gen_kung(stmt),
         }
     }
 
@@ -155,6 +150,38 @@ impl<'a> Codegen<'a> {
         };
 
         WhileBuilder::new(self.gen_expr(cond), self.gen_block(block)).build()
+    }
+
+    fn gen_kung(&self, stmt: &TypedStmt) -> CStatement {
+        let TypedStmtKind::Kung { branches } = &stmt.kind else {
+            unreachable!()
+        };
+
+        let initial_branch = &branches[0];
+        let initial_cond = self.gen_expr(initial_branch.cond.as_ref().unwrap());
+        let initial_body = self.gen_stmt(&initial_branch.block);
+        let mut builder = IfBuilder::new(initial_cond, initial_body);
+
+        let mut had_else = false;
+        for branch in branches[1..].iter() {
+            if branch.cond.is_none() {
+                had_else = true;
+                break;
+            }
+
+            let cond = self.gen_expr(branch.cond.as_ref().unwrap());
+            let body = self.gen_stmt(&branch.block);
+            builder = builder.add_elseif_branch(cond, body);
+        }
+
+        if had_else {
+            let len = branches.len();
+            let body = self.gen_stmt(&branches[len - 1].block);
+
+            builder = builder.with_else_branch(body);
+        }
+
+        builder.build()
     }
 
     fn gen_expr(&self, expr: &TypedExpr) -> String {

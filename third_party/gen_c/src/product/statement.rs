@@ -1,4 +1,5 @@
 use crate::ctype::CType;
+use std::fmt::Write;
 
 pub enum CStatement {
     Declaration {
@@ -23,6 +24,11 @@ pub enum CStatement {
     While {
         cond: String,
         body: Box<CStatement>,
+    },
+    If {
+        initial_cond: String,
+        initial_block: Box<CStatement>,
+        branches: Vec<IfBranch>,
     },
 }
 
@@ -109,6 +115,61 @@ impl CStatement {
                     body.produce_c(indent)
                 )
             }
+            Self::If {
+                initial_cond,
+                initial_block,
+                branches,
+            } => {
+                let mut initial_branch = format!(
+                    "{}if ({})
+{}",
+                    " ".repeat(indent),
+                    initial_cond,
+                    initial_block.produce_c(indent)
+                );
+
+                for branch in branches {
+                    let _ = match branch.cond {
+                        Some(s) => write!(
+                            initial_branch,
+                            " else if ({})
+{}",
+                            s,
+                            branch.body.produce_c(indent)
+                        ),
+                        None => write!(
+                            initial_branch,
+                            " else
+{}",
+                            branch.body.produce_c(indent)
+                        ),
+                    };
+                }
+
+                initial_branch
+            }
         }
+    }
+}
+
+pub struct IfBranch {
+    pub(crate) cond: Option<String>,
+    pub(crate) body: Box<CStatement>,
+}
+
+impl IfBranch {
+    pub fn new(cond: Option<String>, body: CStatement) -> Self {
+        Self {
+            cond,
+            body: Box::new(body),
+        }
+    }
+
+    pub fn cond(&self) -> Option<&String> {
+        self.cond.as_ref()
+    }
+
+    pub fn body(&self) -> &CStatement {
+        &self.body
     }
 }
