@@ -140,7 +140,7 @@ pub enum CompilerError {
         arg_len: usize,
         expected_len: usize,
 
-        #[label("{arg_len} na argumento, umaasa ng {expected_len}")]
+        #[label("{arg_len} na argumento ang naibigay, pero umaasa ng {expected_len}")]
         args_span: SourceSpan,
     },
 

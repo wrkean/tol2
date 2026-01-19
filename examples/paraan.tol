@@ -8,3 +8,6 @@ paraan ano(x na i32) -> f64:
         ang z na f32 = 2.2
 
     ibalik 6.7
+
+paraan call():
+    ang x na f64 = ano(5, 2)
