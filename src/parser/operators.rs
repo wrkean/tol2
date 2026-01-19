@@ -28,19 +28,24 @@ impl TolOp {
 use Associativity::*;
 pub fn get_infix_op(kind: &TokenKind) -> TolOp {
     match kind {
-        TokenKind::PipePipe => TolOp::new(Left, 1),
-        TokenKind::AmperAmper => TolOp::new(Left, 2),
-        TokenKind::BangEqual => TolOp::new(Left, 3),
-        TokenKind::EqualEqual => TolOp::new(Left, 3),
-        TokenKind::LessEqual => TolOp::new(Left, 4),
-        TokenKind::GreaterEqual => TolOp::new(Left, 4),
-        TokenKind::Less => TolOp::new(Left, 4),
-        TokenKind::Greater => TolOp::new(Left, 4),
-        TokenKind::Plus => TolOp::new(Left, 5),
-        TokenKind::Minus => TolOp::new(Left, 5),
-        TokenKind::Star => TolOp::new(Left, 6),
-        TokenKind::Slash => TolOp::new(Left, 6),
-        TokenKind::LParen => TolOp::new(Left, 7),
+        TokenKind::PlusEqual
+        | TokenKind::MinusEqual
+        | TokenKind::StarEqual
+        | TokenKind::SlashEqual
+        | TokenKind::Equal => TolOp::new(Left, 1),
+        TokenKind::PipePipe => TolOp::new(Left, 2),
+        TokenKind::AmperAmper => TolOp::new(Left, 3),
+        TokenKind::BangEqual => TolOp::new(Left, 4),
+        TokenKind::EqualEqual => TolOp::new(Left, 4),
+        TokenKind::LessEqual => TolOp::new(Left, 5),
+        TokenKind::GreaterEqual => TolOp::new(Left, 5),
+        TokenKind::Less => TolOp::new(Left, 5),
+        TokenKind::Greater => TolOp::new(Left, 5),
+        TokenKind::Plus => TolOp::new(Left, 6),
+        TokenKind::Minus => TolOp::new(Left, 6),
+        TokenKind::Star => TolOp::new(Left, 7),
+        TokenKind::Slash => TolOp::new(Left, 7),
+        TokenKind::LParen => TolOp::new(Left, 8),
         _ => TolOp::new(Left, 0),
     }
 }
@@ -48,7 +53,7 @@ pub fn get_infix_op(kind: &TokenKind) -> TolOp {
 pub fn get_prefix_op(kind: &TokenKind) -> TolOp {
     match kind {
         TokenKind::Minus => TolOp::new(Right, 3),
-        TokenKind::Hindi => TolOp::new(Right, 10),
+        TokenKind::Bang => TolOp::new(Right, 10),
         _ => TolOp::new(Right, 0),
     }
 }

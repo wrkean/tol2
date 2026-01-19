@@ -1,4 +1,8 @@
-use crate::{ast::expr::StructLiteralField, lexer::token::Token, toltype::TolType};
+use crate::{
+    ast::expr::StructLiteralField,
+    lexer::token::{Token, TokenKind},
+    toltype::TolType,
+};
 
 #[derive(Debug)]
 pub struct TypedExpr {
@@ -26,45 +30,10 @@ pub enum TypedExprKind {
     Identifier {
         lexeme: Token,
     },
-    Add {
+    Binary {
         left: Box<TypedExpr>,
         right: Box<TypedExpr>,
-    },
-    Sub {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    Mult {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    Div {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    Equality {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    InEquality {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    Greater {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    Less {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    GreaterEqual {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    LessEqual {
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
+        op: TokenKind,
     },
     FnCall {
         callee: Box<TypedExpr>,
@@ -74,10 +43,8 @@ pub enum TypedExprKind {
         left: Box<TypedExpr>,
         fields: Vec<StructLiteralField>,
     },
-    UnaryMinus {
+    Unary {
         right: Box<TypedExpr>,
-    },
-    UnaryNot {
-        right: Box<TypedExpr>,
+        op: TokenKind,
     },
 }

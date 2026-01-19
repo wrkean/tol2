@@ -22,7 +22,7 @@ use crate::{
     },
     compiler::CompilerCtx,
     error::CompilerError,
-    lexer::token::Token,
+    lexer::token::{Token, TokenKind},
     toltype::TolType,
 };
 
@@ -380,22 +380,135 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                 TolType::Bool,
             )),
             ExprKind::Identifier { .. } => self.analyze_identifier(expr),
-            ExprKind::Add { .. }
-            | ExprKind::Sub { .. }
-            | ExprKind::Mult { .. }
-            | ExprKind::Div { .. } => self.analyze_arithmetic(expr),
-            ExprKind::Equality { .. }
-            | ExprKind::InEquality { .. }
-            | ExprKind::Greater { .. }
-            | ExprKind::Less { .. }
-            | ExprKind::GreaterEqual { .. }
-            | ExprKind::LessEqual { .. } => self.analyze_comparison(expr),
+            ExprKind::Binary { .. } => self.analyze_binary(expr),
+            ExprKind::Unary { .. } => self.analyze_unary(expr),
             ExprKind::FnCall { .. } => self.analyze_fncall(expr),
             ExprKind::StructLiteral { .. } => todo!(),
             ExprKind::Dummy => todo!(),
-            ExprKind::UnaryNot { right } => {
-                let right_span = right.span();
-                let right_typex = self.analyze_expression(*right)?;
+        }
+    }
+
+    fn analyze_identifier(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
+        let ExprKind::Identifier { lexeme } = expr.kind else {
+            unreachable!()
+        };
+
+        let id = self.lookup_symbol(&lexeme)?;
+        let ttype = self.compiler_ctx.symbol_table[id].get_type();
+        Ok(TypedExpr::new(TypedExprKind::Integer { lexeme }, ttype))
+    }
+
+    fn analyze_binary(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
+        // match expr.kind {
+        //     ExprKind::Add { left, right } => analyze_arithmetic_helper!(self, left, right, Add),
+        //     ExprKind::Sub { left, right } => analyze_arithmetic_helper!(self, left, right, Sub),
+        //     ExprKind::Mult { left, right } => analyze_arithmetic_helper!(self, left, right, Mult),
+        //     ExprKind::Div { left, right } => analyze_arithmetic_helper!(self, left, right, Div),
+        //     _ => unreachable!(),
+        // }
+        //
+        let ExprKind::Binary { left, right, op } = expr.kind else {
+            unreachable!()
+        };
+
+        let left_span = left.span();
+        let right_span = right.span();
+
+        let left_typex = self.analyze_expression(*left)?;
+        let right_typex = self.analyze_expression(*right)?;
+
+        match &op {
+            TokenKind::Plus
+            | TokenKind::Minus
+            | TokenKind::Star
+            | TokenKind::Slash
+            | TokenKind::Equal
+            | TokenKind::PlusEqual
+            | TokenKind::MinusEqual
+            | TokenKind::StarEqual
+            | TokenKind::SlashEqual => {
+                let coerced = left_typex.ttype.coerce_or_mismatch(
+                    &right_typex.ttype,
+                    left_span,
+                    right_span,
+                )?;
+
+                Ok(TypedExpr::new(
+                    TypedExprKind::Binary {
+                        left: Box::new(left_typex),
+                        right: Box::new(right_typex),
+                        op,
+                    },
+                    coerced,
+                ))
+            }
+            TokenKind::Less
+            | TokenKind::LessEqual
+            | TokenKind::Greater
+            | TokenKind::GreaterEqual => {
+                if left_typex.ttype.is_numeric() && right_typex.ttype.is_numeric() {
+                    return Ok(TypedExpr::new(
+                        TypedExprKind::Binary {
+                            left: Box::new(left_typex),
+                            right: Box::new(right_typex),
+                            op,
+                        },
+                        TolType::Bool,
+                    ));
+                }
+
+                Err(CompilerError::InvalidExpression {
+                    spans: vec![
+                        LabeledSpan::new(
+                            Some(format!(
+                                "Umaasa ng numerikong tipo, pero ang nakita ay `{}`",
+                                left_typex.ttype
+                            )),
+                            left_span.start,
+                            left_span.end - left_span.start,
+                        ),
+                        LabeledSpan::new(
+                            Some(format!(
+                                "Umaasa ng numerikong tipo, pero ang nakita ay `{}`",
+                                right_typex.ttype
+                            )),
+                            right_span.start,
+                            right_span.end - right_span.start,
+                        ),
+                    ],
+                    help: Some(format!(
+                        "Numerikong tipo lamang ang tinatanggap ng `{}`",
+                        op.op_to_string().unwrap()
+                    )),
+                })
+            }
+            TokenKind::EqualEqual | TokenKind::BangEqual => {
+                if (left_typex.ttype.is_numeric() && right_typex.ttype.is_numeric())
+                    || (left_typex.ttype == TolType::Bool && right_typex.ttype == TolType::Bool)
+                {
+                    return Ok(TypedExpr::new(
+                        TypedExprKind::Binary {
+                            left: Box::new(left_typex),
+                            right: Box::new(right_typex),
+                            op,
+                        },
+                        TolType::Bool,
+                    ));
+                }
+                Err(CompilerError::InvalidExpression { spans: vec![
+                        LabeledSpan::new(Some(format!("Ito ay `{}`", left_typex.ttype)), left_span.start, left_span.end - left_span.start),
+                        LabeledSpan::new(Some(format!("Ito ay `{}`", right_typex.ttype)), right_span.start, right_span.end - right_span.start),
+                        LabeledSpan::new(Some(format!("Magkaiba ang tipo ng kaliwa at kanan: `{}` at `{}`", left_typex.ttype, right_typex.ttype)), left_span.start, right_span.end - left_span.start)
+                    ], help: Some("Dapat na magkaparehang tipo ang kaliwa at kanan, kung ang kaliwa ay `bool`, ang kanan din ay `bool`. Kung numeriko naman ay dapat numeriko din ang kabila".to_string()) })
+            }
+            TokenKind::PipePipe | TokenKind::AmperAmper => {
+                if left_typex.ttype != TolType::Bool {
+                    return Err(CompilerError::UnexpectedType2 {
+                        expected: TolType::Bool.to_string(),
+                        found: left_typex.ttype.to_string(),
+                        span: left_span.into(),
+                    });
+                }
 
                 if right_typex.ttype != TolType::Bool {
                     return Err(CompilerError::UnexpectedType2 {
@@ -406,27 +519,60 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                 }
 
                 Ok(TypedExpr::new(
-                    TypedExprKind::UnaryNot {
+                    TypedExprKind::Binary {
+                        left: Box::new(left_typex),
                         right: Box::new(right_typex),
+                        op,
                     },
                     TolType::Bool,
                 ))
             }
-            ExprKind::UnaryMinus { right } => {
-                let right_span = right.span();
-                let right_typex = self.analyze_expression(*right)?;
+            TokenKind::Pipe => todo!(),
+            TokenKind::Amper => todo!(),
+            _ => todo!(),
+        }
+    }
 
+    fn analyze_unary(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
+        let ExprKind::Unary { op, right } = expr.kind else {
+            unreachable!()
+        };
+
+        let right_span = right.span();
+        let right_typex = self.analyze_expression(*right)?;
+
+        match &op {
+            TokenKind::Bang => {
+                if right_typex.ttype != TolType::Bool {
+                    return Err(CompilerError::UnexpectedType2 {
+                        expected: TolType::Bool.to_string(),
+                        found: right_typex.ttype.to_string(),
+                        span: right_span.into(),
+                    });
+                }
+
+                Ok(TypedExpr::new(
+                    TypedExprKind::Unary {
+                        right: Box::new(right_typex),
+                        op,
+                    },
+                    TolType::Bool,
+                ))
+            }
+            TokenKind::Minus => {
                 if let Some(t) = TolType::UnsizedInteger.coerce(&right_typex.ttype) {
                     Ok(TypedExpr::new(
-                        TypedExprKind::UnaryMinus {
+                        TypedExprKind::Unary {
                             right: Box::new(right_typex),
+                            op,
                         },
                         t,
                     ))
                 } else if let Some(t) = TolType::UnsizedFloat.coerce(&right_typex.ttype) {
                     Ok(TypedExpr::new(
-                        TypedExprKind::UnaryMinus {
+                        TypedExprKind::Unary {
                             right: Box::new(right_typex),
+                            op,
                         },
                         t,
                     ))
@@ -442,49 +588,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                         ),
                     })
                 }
-            }
-        }
-    }
-
-    fn analyze_identifier(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
-        let ExprKind::Identifier { lexeme } = expr.kind else {
-            unreachable!()
-        };
-
-        let id = self.lookup_symbol(&lexeme)?;
-        let ttype = self.compiler_ctx.symbol_table[id].get_type();
-        Ok(TypedExpr::new(TypedExprKind::Integer { lexeme }, ttype))
-    }
-
-    fn analyze_arithmetic(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
-        match expr.kind {
-            ExprKind::Add { left, right } => analyze_arithmetic_helper!(self, left, right, Add),
-            ExprKind::Sub { left, right } => analyze_arithmetic_helper!(self, left, right, Sub),
-            ExprKind::Mult { left, right } => analyze_arithmetic_helper!(self, left, right, Mult),
-            ExprKind::Div { left, right } => analyze_arithmetic_helper!(self, left, right, Div),
-            _ => unreachable!(),
-        }
-    }
-
-    fn analyze_comparison(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
-        match expr.kind {
-            ExprKind::Equality { left, right } => {
-                analyze_comparison_helper!(self, left, right, Equality)
-            }
-            ExprKind::InEquality { left, right } => {
-                analyze_comparison_helper!(self, left, right, InEquality)
-            }
-            ExprKind::Greater { left, right } => {
-                analyze_comparison_helper!(self, left, right, Greater)
-            }
-            ExprKind::Less { left, right } => {
-                analyze_comparison_helper!(self, left, right, Less)
-            }
-            ExprKind::GreaterEqual { left, right } => {
-                analyze_comparison_helper!(self, left, right, GreaterEqual)
-            }
-            ExprKind::LessEqual { left, right } => {
-                analyze_comparison_helper!(self, left, right, LessEqual)
             }
             _ => unreachable!(),
         }

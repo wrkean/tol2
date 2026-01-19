@@ -481,26 +481,35 @@ impl<'a> Parser<'a> {
                 let end = rhs.span().end;
 
                 Ok(Expr {
-                    kind: ExprKind::UnaryMinus {
+                    kind: ExprKind::Unary {
+                        op: TokenKind::Minus,
                         right: Box::new(rhs),
                     },
                     span: current_tok_span.start..end,
                 })
             }
-            TokenKind::Hindi => {
+            TokenKind::Bang => {
                 self.advance();
-                let prec = operators::get_prefix_op(&TokenKind::Hindi).precedence();
+                let prec = operators::get_prefix_op(&TokenKind::Bang).precedence();
                 let rhs = self.parse_expression(prec, ExprParseContext::InExpression)?;
                 let end = rhs.span.end;
 
                 Ok(Expr {
-                    kind: ExprKind::UnaryNot {
+                    kind: ExprKind::Unary {
+                        op: TokenKind::Bang,
                         right: Box::new(rhs),
                     },
                     span: current_tok_span.start..end,
                 })
             }
-            _ => todo!(),
+            _ => Err(CompilerError::UnexpectedToken {
+                expected: format!(
+                    "Umasa ng expresyon, pero nakita ay `{}`",
+                    current_tok.lexeme()
+                ),
+                span: current_tok_span.into(),
+                help: None,
+            }),
         }
     }
 
@@ -511,38 +520,38 @@ impl<'a> Parser<'a> {
             Associativity::Right => infix.precedence() + 1,
         };
 
-        let mut make_expr = |left: Expr,
-                             constructor: fn(Box<Expr>, Box<Expr>) -> ExprKind|
-         -> Result<Expr, CompilerError> {
-            let right = self.parse_expression(precedence, ExprParseContext::InExpression)?;
-            let span = left.span.start..right.span.end;
-            Ok(Expr {
-                kind: constructor(Box::new(left), Box::new(right)),
-                span,
-            })
-        };
-
         match op.kind() {
-            TokenKind::Plus => make_expr(left, |l, r| ExprKind::Add { left: l, right: r }),
-            TokenKind::Minus => make_expr(left, |l, r| ExprKind::Sub { left: l, right: r }),
-            TokenKind::Star => make_expr(left, |l, r| ExprKind::Mult { left: l, right: r }),
-            TokenKind::Slash => make_expr(left, |l, r| ExprKind::Div { left: l, right: r }),
-            TokenKind::EqualEqual => {
-                make_expr(left, |l, r| ExprKind::Equality { left: l, right: r })
-            }
-            TokenKind::BangEqual => {
-                make_expr(left, |l, r| ExprKind::InEquality { left: l, right: r })
-            }
-            TokenKind::Greater => make_expr(left, |l, r| ExprKind::Greater { left: l, right: r }),
-            TokenKind::Less => make_expr(left, |l, r| ExprKind::Less { left: l, right: r }),
-            TokenKind::GreaterEqual => {
-                make_expr(left, |l, r| ExprKind::GreaterEqual { left: l, right: r })
-            }
-            TokenKind::LessEqual => {
-                make_expr(left, |l, r| ExprKind::LessEqual { left: l, right: r })
+            TokenKind::Plus
+            | TokenKind::Minus
+            | TokenKind::Star
+            | TokenKind::Slash
+            | TokenKind::PlusEqual
+            | TokenKind::MinusEqual
+            | TokenKind::StarEqual
+            | TokenKind::SlashEqual
+            | TokenKind::EqualEqual
+            | TokenKind::BangEqual
+            | TokenKind::Pipe
+            | TokenKind::PipePipe
+            | TokenKind::Amper
+            | TokenKind::AmperAmper
+            | TokenKind::LessEqual
+            | TokenKind::GreaterEqual
+            | TokenKind::Less
+            | TokenKind::Greater => {
+                let right = self.parse_expression(precedence, ExprParseContext::InExpression)?;
+                let span = left.span.start..right.span.end;
+                Ok(Expr {
+                    kind: ExprKind::Binary {
+                        left: Box::new(left),
+                        right: Box::new(right),
+                        op: op.kind.clone(),
+                    },
+                    span,
+                })
             }
             TokenKind::LParen => self.parse_fncall(left, op.span.start),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 

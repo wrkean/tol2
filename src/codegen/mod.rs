@@ -194,36 +194,12 @@ impl<'a> Codegen<'a> {
                 "mali" => "mali".to_string(),
                 _ => unreachable!(),
             },
-            TypedExprKind::Add { left, right } => {
-                format!("({} + {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Sub { left, right } => {
-                format!("({} - {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Mult { left, right } => {
-                format!("({} * {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Div { left, right } => {
-                format!("({} / {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Equality { left, right } => {
-                format!("({} == {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::InEquality { left, right } => {
-                format!("({} != {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Greater { left, right } => {
-                format!("({} > {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::Less { left, right } => {
-                format!("({} < {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::GreaterEqual { left, right } => {
-                format!("({} >= {})", self.gen_expr(left), self.gen_expr(right))
-            }
-            TypedExprKind::LessEqual { left, right } => {
-                format!("({} <= {})", self.gen_expr(left), self.gen_expr(right))
-            }
+            TypedExprKind::Binary { left, right, op } => format!(
+                "({} {} {})",
+                self.gen_expr(left),
+                op.op_to_string().unwrap(),
+                self.gen_expr(right)
+            ),
             TypedExprKind::FnCall { callee, args } => {
                 format!(
                     "({}({}))",
@@ -235,8 +211,9 @@ impl<'a> Codegen<'a> {
                 )
             }
             TypedExprKind::StructLiteral { .. } => todo!(),
-            TypedExprKind::UnaryMinus { right } => format!("(-{})", self.gen_expr(right)),
-            TypedExprKind::UnaryNot { right } => format!("(!{})", self.gen_expr(right)),
+            TypedExprKind::Unary { right, op } => {
+                format!("({}{})", op.op_to_string().unwrap(), self.gen_expr(right))
+            }
         }
     }
 

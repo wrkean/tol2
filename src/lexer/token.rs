@@ -90,15 +90,16 @@ pub enum TokenKind {
     #[keyword]
     Na,
 
-    #[keyword]
-    Hindi,
-
     // Operators
     Plus,
     Minus,
     Star,
     Slash,
     Equal,
+    PlusEqual,
+    MinusEqual,
+    StarEqual,
+    SlashEqual,
     EqualEqual,
     Pipe,
     PipePipe,
@@ -166,5 +167,34 @@ impl TokenKind {
 
     pub fn starts_a_type(&self) -> bool {
         matches!(self, TokenKind::Identifier)
+    }
+
+    pub fn op_to_string(&self) -> Option<String> {
+        Some(
+            match self {
+                TokenKind::Plus => "+",
+                TokenKind::Minus => "-",
+                TokenKind::Star => "*",
+                TokenKind::Slash => "/",
+                TokenKind::Equal => "=",
+                TokenKind::PlusEqual => "+=",
+                TokenKind::MinusEqual => "-=",
+                TokenKind::StarEqual => "*=",
+                TokenKind::SlashEqual => "/=",
+                TokenKind::EqualEqual => "==",
+                TokenKind::Pipe => "|",
+                TokenKind::PipePipe => "||",
+                TokenKind::Amper => "&",
+                TokenKind::AmperAmper => "&&",
+                TokenKind::Bang => "!",
+                TokenKind::BangEqual => "!=",
+                TokenKind::Less => "<",
+                TokenKind::LessEqual => "<=",
+                TokenKind::Greater => ">",
+                TokenKind::GreaterEqual => ">=",
+                _ => return None,
+            }
+            .to_string(),
+        )
     }
 }
