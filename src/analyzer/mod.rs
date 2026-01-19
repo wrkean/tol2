@@ -151,8 +151,13 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         )?;
 
         self.enter_scope();
-        for param in params {
-            self.declare_symbol(&param.id, SymbolKind::Var { ttype: param.ttype })?;
+        for param in params.iter() {
+            self.declare_symbol(
+                &param.id,
+                SymbolKind::Var {
+                    ttype: param.ttype.clone(),
+                },
+            )?;
         }
 
         self.analyzer_ctx.enter_fn(return_type.clone());
@@ -161,6 +166,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         self.exit_scope();
 
         Ok(TypedStmt::new(TypedStmtKind::Paraan {
+            params,
             symbol_id,
             block: Box::new(block),
         }))
@@ -207,7 +213,8 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             unreachable!()
         };
 
-        if rhs.is_none() && self.analyzer_ctx.cur_fn_return_type() != &TolType::Void {
+        let cur_fn_return_type = self.analyzer_ctx.cur_fn_return_type();
+        if rhs.is_none() && cur_fn_return_type != &TolType::Void {
             return Err(CompilerError::UnexpectedType2 {
                 expected: self.analyzer_ctx.cur_fn_return_type().to_string(),
                 found: TolType::Void.to_string(),
@@ -215,11 +222,16 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             });
         }
 
+        if rhs.is_none() && cur_fn_return_type == &TolType::Void {
+            return Ok(TypedStmt::new(TypedStmtKind::Ibalik { rhs: None }));
+        }
+
         let rhs_span = rhs.as_ref().unwrap().span();
         let rhs_typex = self.analyze_expression(rhs.unwrap())?;
-        match rhs_typex
-            .ttype
-            .coerce(self.analyzer_ctx.cur_fn_return_type())
+        match self
+            .analyzer_ctx
+            .cur_fn_return_type()
+            .coerce(&rhs_typex.ttype)
         {
             Some(_) => {}
             None => {
@@ -231,7 +243,9 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             }
         }
 
-        Ok(TypedStmt::new(TypedStmtKind::Ibalik { rhs: rhs_typex }))
+        Ok(TypedStmt::new(TypedStmtKind::Ibalik {
+            rhs: Some(rhs_typex),
+        }))
     }
 
     fn analyze_bawat(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
@@ -437,6 +451,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         };
         let id = self.lookup_symbol_from_expr(callee)?;
         let sym = self.compiler_ctx.symbol_table[id].clone();
+        let callee_typex = self.analyze_expression(callee.as_ref().clone())?;
 
         match sym.kind() {
             SymbolKind::Func { param_types, .. } => {
@@ -450,7 +465,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
 
                 Ok(TypedExpr::new(
                     TypedExprKind::FnCall {
-                        callee: *callee.clone(),
+                        callee: Box::new(callee_typex),
                         args: arg_types,
                     },
                     sym.get_type(),
@@ -545,15 +560,15 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         }
     }
 
-    fn get_id(&self, name: &str) -> Option<usize> {
-        for scope in self.symbol_ids.iter().rev() {
-            if let Some(id) = scope.get(name) {
-                return Some(*id);
-            }
-        }
-
-        None
-    }
+    // fn get_id(&self, name: &str) -> Option<usize> {
+    //     for scope in self.symbol_ids.iter().rev() {
+    //         if let Some(id) = scope.get(name) {
+    //             return Some(*id);
+    //         }
+    //     }
+    //
+    //     None
+    // }
 
     fn enter_scope(&mut self) {
         self.symbol_ids.push(HashMap::new());
