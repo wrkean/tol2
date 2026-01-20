@@ -49,8 +49,10 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         // TODO: Declare symbols first then analyze
         let mut typed_ast = Vec::new();
         for mut stmt in ast {
-            TypeResolver::resolve_stmt(&mut stmt)
-                .unwrap_or_else(|e| self.compiler_ctx.add_error(e));
+            if let Err(e) = TypeResolver::resolve_stmt(&mut stmt) {
+                self.compiler_ctx.add_error(e);
+                continue; // Skip analyzing if failed to resolve type of the given statement
+            }
             match self.analyze_statement(stmt) {
                 Ok(ts) => typed_ast.push(ts),
                 Err(e) => self.compiler_ctx.add_error(e),
@@ -80,8 +82,8 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     fn analyze_paraan(&mut self, stmt: Stmt) -> Result<TypedStmt, CompilerError> {
         let StmtKind::Paraan {
             id,
-            mut return_type,
-            mut params,
+            return_type,
+            params,
             block,
             ..
         } = stmt.kind
@@ -89,12 +91,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             unreachable!()
         };
 
-        // Resolve types
-        for param in params.iter_mut() {
-            param.ttype = self.resolve_type(param.ttype.clone());
-        }
-
-        return_type = self.resolve_type(return_type);
         let symbol_id = self.declare_symbol(
             &id,
             SymbolKind::Func {
@@ -134,7 +130,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             }
         };
 
-        let ttype = self.resolve_type(ttype);
         let rhs_span = rhs.span();
         let rhs_type = self.analyze_expression(rhs)?;
         ttype.coerce_or_mismatch(&rhs_type.ttype, id.span(), rhs_span)?;
@@ -593,15 +588,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         }
 
         Ok(())
-    }
-
-    pub fn resolve_type(&self, ttype: TolType) -> TolType {
-        match ttype {
-            TolType::UnknownIdentifier(_id) => todo!(),
-            TolType::UnsizedInteger => TolType::I32,
-            TolType::UnsizedFloat => TolType::F64,
-            _ => ttype,
-        }
     }
 
     pub fn declare_symbol(
