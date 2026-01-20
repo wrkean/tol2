@@ -1,5 +1,6 @@
 pub mod analyzer_ctx;
 pub mod symbol;
+pub mod type_resolver;
 
 use std::{
     collections::{HashMap, hash_map::Entry},
@@ -84,6 +85,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         else {
             unreachable!()
         };
+
         // Resolve types
         for param in params.iter_mut() {
             param.ttype = self.resolve_type(param.ttype.clone());
