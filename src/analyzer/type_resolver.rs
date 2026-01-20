@@ -10,8 +10,7 @@ impl TypeResolver {
     pub fn resolve(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
         match &stmt.kind {
             StmtKind::Paraan { .. } => self.resolve_paraan(stmt),
-            StmtKind::Ang { .. } => todo!(),
-            StmtKind::Dapat { .. } => todo!(),
+            StmtKind::Ang { .. } | StmtKind::Dapat { .. } => self.resolve_decl(stmt),
             StmtKind::Ibalik { .. } => todo!(),
             StmtKind::Bawat { .. } => todo!(),
             StmtKind::Habang { .. } => todo!(),
@@ -22,7 +21,7 @@ impl TypeResolver {
         }
     }
 
-    pub fn resolve_paraan(&mut self, stmt: &mut Stmt) -> Result<(), CompilerError> {
+    pub fn resolve_paraan(&self, stmt: &mut Stmt) -> Result<(), CompilerError> {
         let StmtKind::Paraan {
             return_type,
             params,
@@ -40,6 +39,16 @@ impl TypeResolver {
         *return_type = self.resolve_type(return_type);
 
         self.resolve(block)?;
+
+        Ok(())
+    }
+
+    pub fn resolve_decl(&self, stmt: &mut Stmt) -> Result<(), CompilerError> {
+        let (StmtKind::Ang { ttype, .. } | StmtKind::Dapat { ttype, .. }) = &mut stmt.kind else {
+            unreachable!()
+        };
+
+        *ttype = self.resolve_type(ttype);
 
         Ok(())
     }
