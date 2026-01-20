@@ -13,6 +13,7 @@ use crate::{
     analyzer::{
         analyzer_ctx::AnalyzerContext,
         symbol::{Symbol, SymbolKind},
+        type_resolver::TypeResolver,
     },
     ast::{
         Ast, TypedAst,
@@ -47,7 +48,9 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     pub fn analyze(mut self, ast: Ast) -> TypedAst {
         // TODO: Declare symbols first then analyze
         let mut typed_ast = Vec::new();
-        for stmt in ast {
+        for mut stmt in ast {
+            TypeResolver::resolve_stmt(&mut stmt)
+                .unwrap_or_else(|e| self.compiler_ctx.add_error(e));
             match self.analyze_statement(stmt) {
                 Ok(ts) => typed_ast.push(ts),
                 Err(e) => self.compiler_ctx.add_error(e),
