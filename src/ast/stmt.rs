@@ -39,12 +39,12 @@ pub enum StmtKind {
     },
     Ang {
         id: Token,
-        ttype: TolType,
+        ttype: Option<TolType>,
         rhs: Expr,
     },
     Dapat {
         id: Token,
-        ttype: TolType,
+        ttype: Option<TolType>,
         rhs: Expr,
     },
     Ibalik {

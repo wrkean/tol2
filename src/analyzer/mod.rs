@@ -51,7 +51,6 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         for mut stmt in ast {
             if let Err(e) = TypeResolver::resolve_stmt(&mut stmt) {
                 self.compiler_ctx.add_error(e);
-                continue; // Skip analyzing if failed to resolve type of the given statement
             }
             match self.analyze_statement(stmt) {
                 Ok(ts) => typed_ast.push(ts),
@@ -131,8 +130,15 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         };
 
         let rhs_span = rhs.span();
-        let rhs_type = self.analyze_expression(rhs)?;
-        ttype.coerce_or_mismatch(&rhs_type.ttype, id.span(), rhs_span)?;
+        let rhs_typex = self.analyze_expression(rhs)?;
+
+        let ttype = self.infer_type(
+            ttype.as_ref(),
+            &rhs_typex.ttype,
+            id.span(),
+            rhs_span,
+            id.lexeme(),
+        )?;
 
         let symbol_id = self.declare_symbol(
             &id,
@@ -145,12 +151,12 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         if is_ang {
             Ok(TypedStmt::new(TypedStmtKind::Ang {
                 symbol_id,
-                rhs: rhs_type,
+                rhs: rhs_typex,
             }))
         } else {
             Ok(TypedStmt::new(TypedStmtKind::Dapat {
                 symbol_id,
-                rhs: rhs_type,
+                rhs: rhs_typex,
             }))
         }
     }
@@ -562,6 +568,35 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                     span: callee.span().into(),
                 })
             }
+        }
+    }
+
+    fn infer_type(
+        &mut self,
+        left: Option<&TolType>,
+        right: &TolType,
+        left_span: Range<usize>,
+        right_span: Range<usize>,
+        left_name: &str,
+    ) -> Result<TolType, CompilerError> {
+        match left {
+            Some(t) => Ok(t.coerce_or_mismatch(right, left_span, right_span)?),
+            None => match right {
+                TolType::UnsizedInteger | TolType::UnsizedFloat => {
+                    Err(CompilerError::UninferrableType {
+                        help_spans: vec![
+                            LabeledSpan::new(Some("Ang expresyong ito ay binubuo ng mga numerong literal".to_string()), right_span.start, right_span.end - right_span.start),
+                            LabeledSpan::new(Some("Kailangang sabihin kung ano ang konkretong tipo (i32, f32, atbp.) para sa mga numerong literal".to_string()), left_span.start, left_span.end - left_span.start),
+                        ],
+                        help: Some(format!("Subukan ang `{} na {} = ...`", left_name, match right {
+                            TolType::UnsizedInteger => "i32",
+                            TolType::UnsizedFloat => "f64",
+                            _ => unreachable!()
+                        })),
+                    })
+                }
+                _ => Ok(right.to_owned()),
+            },
         }
     }
 

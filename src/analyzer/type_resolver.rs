@@ -42,7 +42,9 @@ impl TypeResolver {
             unreachable!()
         };
 
-        *ttype = Self::resolve_type(ttype);
+        if let Some(t) = ttype {
+            *t = Self::resolve_type(t);
+        }
 
         Ok(())
     }

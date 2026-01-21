@@ -108,10 +108,14 @@ impl<'a> Parser<'a> {
                 "pangalan pagkatapos ng `ang` o `dapat`",
             )?
             .clone();
-        self.consume(TokenKind::Na, "`na` pagkatapos ng pangalan")?;
-        let ttype = self.parse_type()?;
+        let ttype = if self.peek().kind == TokenKind::Na {
+            self.advance();
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
 
-        self.consume(TokenKind::Equal, "`=` pagkatapos ng tipo")?;
+        self.consume(TokenKind::Equal, "`=`")?;
         let rhs = self.parse_expression(0, ExprParseContext::AngDapatStatement)?;
         let end = consume_stmt_terminator!(self).span.end;
 

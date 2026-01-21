@@ -36,6 +36,7 @@ pub enum TolType {
     UnsizedInteger,
     UnsizedFloat,
     Unknown,
+    Error,
 }
 
 impl TolType {
@@ -84,6 +85,7 @@ impl TolType {
             // unsized float
             (F32, UnsizedFloat) | (UnsizedFloat, F32) => Some(F32),
             (F64, UnsizedFloat) | (UnsizedFloat, F64) => Some(F64),
+            (Error, _) | (_, Error) => Some(Error),
 
             _ => None,
         }

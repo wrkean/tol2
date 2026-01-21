@@ -167,4 +167,13 @@ pub enum CompilerError {
         #[label("Dapat na may expresyon ang `kungdi` na ito")]
         span: SourceSpan,
     },
+
+    #[error("{}", "Kailangan ng konkretong tipo".bright_red())]
+    UninferrableType {
+        #[label(collection)]
+        help_spans: Vec<LabeledSpan>,
+
+        #[help]
+        help: Option<String>,
+    },
 }
