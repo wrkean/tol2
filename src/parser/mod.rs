@@ -397,6 +397,26 @@ impl<'a> Parser<'a> {
                     self.advance();
                     Ok(TolType::Bool)
                 }
+                "[" => {
+                    self.advance();
+                    let inner = self.parse_type()?;
+                    let mut size = None;
+                    if self.peek().kind == TokenKind::Semicolon {
+                        self.advance();
+                        size = Some(
+                            self.consume(TokenKind::Integer, "numero")?
+                                .lexeme()
+                                .parse::<usize>()?,
+                        );
+                    }
+
+                    self.consume(TokenKind::RBracket, "]")?;
+
+                    Ok(TolType::Array {
+                        inner: Box::new(inner),
+                        size,
+                    })
+                }
                 _ => {
                     let name = self.advance().lexeme.clone();
                     Ok(TolType::UnknownIdentifier(name))
@@ -510,6 +530,7 @@ impl<'a> Parser<'a> {
                     span: current_tok_span.start..end,
                 })
             }
+            TokenKind::LBracket => self.parse_array_literal(),
             _ => Err(CompilerError::UnexpectedToken {
                 expected: format!(
                     "Umasa ng expresyon, pero nakita ay `{}`",
@@ -648,6 +669,32 @@ impl<'a> Parser<'a> {
                 fields,
             },
             span: start..end,
+        })
+    }
+
+    fn parse_array_literal(&mut self) -> Result<Expr, CompilerError> {
+        let start = self.advance().span.start;
+
+        let mut elems = Vec::new();
+        while !self.is_at_eof() && self.peek().kind != TokenKind::RBracket {
+            elems.push(self.parse_expression(0, ExprParseContext::ArrayLiteral)?);
+
+            if self.peek().kind == TokenKind::Comma {
+                self.advance();
+            } else if self.peek().kind != TokenKind::RBracket {
+                return Err(CompilerError::UnexpectedToken {
+                    expected: "`]` o `,`".to_string(),
+                    span: self.peek().span().into(),
+                    help: None,
+                });
+            }
+        }
+
+        let end = self.consume(TokenKind::RBracket, "`]`")?.span.end;
+
+        Ok(Expr {
+            kind: ExprKind::ArrayLiteral { elems },
+            span: start..end.into(),
         })
     }
 

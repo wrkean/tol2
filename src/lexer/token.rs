@@ -121,11 +121,15 @@ pub enum TokenKind {
     #[semicolon_inferrable]
     RBrace,
 
+    #[semicolon_inferrable]
+    RBracket,
+
     #[stmt_starter]
     Indent,
 
     LParen,
     LBrace,
+    LBracket,
     Comma,
     Colon,
     Semicolon,

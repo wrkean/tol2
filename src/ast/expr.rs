@@ -42,6 +42,9 @@ pub enum ExprKind {
         left: Box<Expr>,
         fields: Vec<StructLiteralField>,
     },
+    ArrayLiteral {
+        elems: Vec<Expr>,
+    },
 
     // Special
     Dummy,
@@ -83,6 +86,7 @@ impl fmt::Display for Expr {
             }
             ExprKind::FnCall { callee, args, .. } => write!(f, "{}({:#?})", callee, args),
             ExprKind::Unary { op, right } => write!(f, "{}{}", op.op_to_string().unwrap(), right),
+            ExprKind::ArrayLiteral { elems } => write!(f, "{:#?}", elems),
         }
     }
 }

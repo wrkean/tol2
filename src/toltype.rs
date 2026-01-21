@@ -30,6 +30,10 @@ pub enum TolType {
 
     // Composites
     UnknownIdentifier(String),
+    Array {
+        inner: Box<TolType>,
+        size: Option<usize>,
+    },
 
     // Special
     Void,
@@ -202,6 +206,12 @@ impl fmt::Display for TolType {
             TolType::Void => write!(f, "void"),
             TolType::UnknownIdentifier(s) => write!(f, "{s}"),
             TolType::Unknown => write!(f, "<Unknown>"),
+            TolType::Array { inner, size } => write!(
+                f,
+                "[{}{}]",
+                inner,
+                size.map_or("".to_string(), |s| format!("; {}", s))
+            ),
         }
     }
 }

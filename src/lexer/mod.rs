@@ -144,6 +144,8 @@ impl<'a> Lexer<'a> {
             ')' => exit_bracket_and_add!(self, ')', TokenKind::RParen),
             '{' => enter_bracket_and_add!(self, '{', TokenKind::LBrace),
             '}' => exit_bracket_and_add!(self, '}', TokenKind::RBrace),
+            '[' => enter_bracket_and_add!(self, '[', TokenKind::LBracket),
+            ']' => exit_bracket_and_add!(self, ']', TokenKind::RBracket),
             ',' => self.add_token(TokenKind::Comma, None),
             ':' => self.add_token(TokenKind::Colon, None),
             ';' => self.add_token(TokenKind::Semicolon, None),
@@ -464,6 +466,7 @@ impl<'a> Lexer<'a> {
         let expected = match bracket {
             ')' => '(',
             '}' => '{',
+            ']' => '[',
             _ => panic!("Invalid bracket, only call this function upon lexing a closing bracket"),
         };
 

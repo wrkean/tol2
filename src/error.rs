@@ -20,6 +20,9 @@ pub enum CompilerError {
     #[error("{}", "Mali sa I/O".bright_red())]
     IO(#[from] std::io::Error),
 
+    #[error("{}", "Hindi maparse ang numero".bright_red())]
+    ParseIntErr(#[from] std::num::ParseIntError),
+
     #[error("{}", "Hindi inaasahang pagtatapos ng input".bright_red())]
     #[diagnostic(help("ito ay hindi madalas mangyari, maaaring bug ito sa compiler."))]
     UnexpectedEndOfInput,
