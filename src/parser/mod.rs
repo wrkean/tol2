@@ -437,18 +437,22 @@ impl<'a> Parser<'a> {
         match current_tok.kind() {
             TokenKind::Integer => {
                 self.advance();
+                let suffix = self.find_suffix(current_tok.lexeme());
                 Ok(Expr {
                     kind: ExprKind::Integer {
                         lexeme: current_tok,
+                        suffix,
                     },
                     span: current_tok_span,
                 })
             }
             TokenKind::Float => {
                 self.advance();
+                let suffix = self.find_suffix(current_tok.lexeme());
                 Ok(Expr {
                     kind: ExprKind::Float {
                         lexeme: current_tok,
+                        suffix,
                     },
                     span: current_tok_span,
                 })
@@ -670,6 +674,20 @@ impl<'a> Parser<'a> {
 
             self.advance();
         }
+    }
+
+    fn find_suffix(&self, lexeme: &str) -> Option<String> {
+        let valid_suffixes = [
+            "u8", "u16", "u32", "u64", "usize", "i8", "i16", "i32", "i64", "isize", "f32", "f64",
+        ];
+
+        for suf in valid_suffixes {
+            if lexeme.contains(suf) {
+                return Some(suf.to_string());
+            }
+        }
+
+        None
     }
 
     fn advance(&mut self) -> &Token {

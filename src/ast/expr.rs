@@ -12,9 +12,11 @@ pub struct Expr {
 pub enum ExprKind {
     Integer {
         lexeme: Token,
+        suffix: Option<String>,
     },
     Float {
         lexeme: Token,
+        suffix: Option<String>,
     },
     Boolean {
         lexeme: Token,
@@ -70,8 +72,8 @@ impl Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {
-            ExprKind::Integer { lexeme }
-            | ExprKind::Float { lexeme }
+            ExprKind::Integer { lexeme, .. }
+            | ExprKind::Float { lexeme, .. }
             | ExprKind::Boolean { lexeme }
             | ExprKind::Identifier { lexeme } => write!(f, "{}", lexeme.lexeme()),
             ExprKind::Dummy => write!(f, "<dummy>"),

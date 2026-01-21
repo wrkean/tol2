@@ -130,6 +130,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         };
 
         let rhs_span = rhs.span();
+        let rhs_str = rhs.to_string();
         let rhs_typex = self.analyze_expression(rhs)?;
 
         let ttype = self.infer_type(
@@ -138,6 +139,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             id.span(),
             rhs_span,
             id.lexeme(),
+            &rhs_str,
         )?;
 
         let symbol_id = self.declare_symbol(
@@ -318,15 +320,38 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
     }
 
     pub fn analyze_expression(&mut self, expr: Expr) -> Result<TypedExpr, CompilerError> {
+        let expr_span = expr.span();
         match expr.kind {
-            ExprKind::Integer { lexeme } => Ok(TypedExpr::new(
-                TypedExprKind::Integer { lexeme },
-                TolType::UnsizedInteger,
-            )),
-            ExprKind::Float { lexeme } => Ok(TypedExpr::new(
-                TypedExprKind::Float { lexeme },
-                TolType::UnsizedFloat,
-            )),
+            ExprKind::Integer { mut lexeme, suffix } => {
+                let ttype = match suffix {
+                    Some(s) => {
+                        // Remove suffix as the compiler doesn't need it anymore
+                        lexeme.lexeme = lexeme.lexeme[0..lexeme.lexeme.len() - s.len()].to_string();
+                        TolType::UnsizedInteger.coerce_or_mismatch(
+                            &s.as_str().into(),
+                            expr_span.start..expr_span.end - s.len(),
+                            expr_span.end - s.len()..expr_span.end,
+                        )?
+                    }
+                    None => TolType::UnsizedInteger,
+                };
+                Ok(TypedExpr::new(TypedExprKind::Integer { lexeme }, ttype))
+            }
+            ExprKind::Float { mut lexeme, suffix } => {
+                let ttype = match suffix {
+                    Some(s) => {
+                        // Remove suffix as the compiler doesn't need it anymore
+                        lexeme.lexeme = lexeme.lexeme[0..lexeme.lexeme.len() - s.len()].to_string();
+                        TolType::UnsizedFloat.coerce_or_mismatch(
+                            &s.as_str().into(),
+                            expr_span.start..expr_span.end - s.len(),
+                            expr_span.end - s.len()..expr_span.end,
+                        )?
+                    }
+                    None => TolType::UnsizedFloat,
+                };
+                Ok(TypedExpr::new(TypedExprKind::Float { lexeme }, ttype))
+            }
             ExprKind::Boolean { lexeme } => Ok(TypedExpr::new(
                 TypedExprKind::Bool { lexeme },
                 TolType::Bool,
@@ -578,21 +603,23 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
         left_span: Range<usize>,
         right_span: Range<usize>,
         left_name: &str,
+        right_str: &str,
     ) -> Result<TolType, CompilerError> {
         match left {
             Some(t) => Ok(t.coerce_or_mismatch(right, left_span, right_span)?),
             None => match right {
                 TolType::UnsizedInteger | TolType::UnsizedFloat => {
+                    let right_ty_str = match right {
+                        TolType::UnsizedInteger => "i32",
+                        TolType::UnsizedFloat => "f64",
+                        _ => unreachable!(),
+                    };
                     Err(CompilerError::UninferrableType {
                         help_spans: vec![
                             LabeledSpan::new(Some("Ang expresyong ito ay binubuo ng mga numerong literal".to_string()), right_span.start, right_span.end - right_span.start),
                             LabeledSpan::new(Some("Kailangang sabihin kung ano ang konkretong tipo (i32, f32, atbp.) para sa mga numerong literal".to_string()), left_span.start, left_span.end - left_span.start),
                         ],
-                        help: Some(format!("Subukan ang `{} na {} = ...`", left_name, match right {
-                            TolType::UnsizedInteger => "i32",
-                            TolType::UnsizedFloat => "f64",
-                            _ => unreachable!()
-                        })),
+                        help: Some(format!("Subukan ang `{} na {} = {}` o `{} = {}{}`",  left_name, right_ty_str, right_str, left_name, right_str, right_ty_str)),
                     })
                 }
                 _ => Ok(right.to_owned()),

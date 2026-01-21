@@ -36,7 +36,6 @@ pub enum TolType {
     UnsizedInteger,
     UnsizedFloat,
     Unknown,
-    Error,
 }
 
 impl TolType {
@@ -85,7 +84,6 @@ impl TolType {
             // unsized float
             (F32, UnsizedFloat) | (UnsizedFloat, F32) => Some(F32),
             (F64, UnsizedFloat) | (UnsizedFloat, F64) => Some(F64),
-            (Error, _) | (_, Error) => Some(Error),
 
             _ => None,
         }
@@ -159,6 +157,26 @@ impl TolType {
     // pub fn is_numeric_conflict(&self, other: &TolType) -> bool {
     //     (self.is_integer() && other.is_float()) || (self.is_float() && other.is_integer())
     // }
+    pub fn from_suffix(suffix: &str, suffix_start: usize) -> Result<TolType, CompilerError> {
+        let suffix_span = suffix_start..suffix_start + suffix.len();
+        match suffix {
+            "u8" => Ok(TolType::U8),
+            "u16" => Ok(TolType::U16),
+            "u32" => Ok(TolType::U32),
+            "u64" => Ok(TolType::U64),
+            "usize" => Ok(TolType::USize),
+            "i8" => Ok(TolType::I8),
+            "i16" => Ok(TolType::I16),
+            "i32" => Ok(TolType::I32),
+            "i64" => Ok(TolType::I64),
+            "isize" => Ok(TolType::ISize),
+            "f32" => Ok(TolType::F32),
+            "f64" => Ok(TolType::F64),
+            _ => Err(CompilerError::InvalidSuffix {
+                span: suffix_span.into(),
+            }),
+        }
+    }
 }
 
 impl fmt::Display for TolType {
@@ -169,24 +187,44 @@ impl fmt::Display for TolType {
             TolType::U32 => write!(f, "u32"),
             TolType::U64 => write!(f, "u64"),
             TolType::USize => write!(f, "usize"),
-
             TolType::I8 => write!(f, "i8"),
             TolType::I16 => write!(f, "i16"),
             TolType::I32 => write!(f, "i32"),
             TolType::I64 => write!(f, "i64"),
             TolType::ISize => write!(f, "isize"),
-
             TolType::F32 => write!(f, "f32"),
             TolType::F64 => write!(f, "f64"),
-
             TolType::Byte => write!(f, "byte"),
             TolType::Char => write!(f, "char"),
             TolType::Bool => write!(f, "bool"),
-
             TolType::UnsizedInteger => write!(f, "UnsizedInteger"),
             TolType::UnsizedFloat => write!(f, "UnsizedFloat"),
             TolType::Void => write!(f, "void"),
-            _ => panic!("Unrecognized string -> toltype!: {self:?}"),
+            TolType::UnknownIdentifier(s) => write!(f, "{s}"),
+            TolType::Unknown => write!(f, "<Unknown>"),
+        }
+    }
+}
+
+impl From<&str> for TolType {
+    fn from(value: &str) -> Self {
+        match value {
+            "u8" => TolType::U8,
+            "u16" => TolType::U16,
+            "u32" => TolType::U32,
+            "u64" => TolType::U64,
+            "usize" => TolType::USize,
+            "i8" => TolType::I8,
+            "i16" => TolType::I16,
+            "i32" => TolType::I32,
+            "i64" => TolType::I64,
+            "isize" => TolType::ISize,
+            "f32" => TolType::F32,
+            "f64" => TolType::F64,
+            "byte" => TolType::Byte,
+            "char" => TolType::Char,
+            "bool" => TolType::Bool,
+            _ => TolType::UnknownIdentifier(value.to_string()),
         }
     }
 }

@@ -176,4 +176,11 @@ pub enum CompilerError {
         #[help]
         help: Option<String>,
     },
+
+    #[error("{}", "Hindi pwedeng suffix sa literal".bright_red())]
+    #[help("Halimbawa ng suffix: (u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, f32, f64)")]
+    InvalidSuffix {
+        #[label("Ito")]
+        span: SourceSpan,
+    },
 }

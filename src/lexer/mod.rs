@@ -4,6 +4,7 @@ use crate::{
     compiler::CompilerCtx,
     error::CompilerError,
     lexer::token::{Token, TokenKind},
+    toltype::TolType,
 };
 
 pub mod token;
@@ -228,9 +229,9 @@ impl<'a> Lexer<'a> {
                             _ => NumberLexingMode::Normal,
                         };
 
-                        self.lex_number(lexing_mode);
+                        self.lex_number(lexing_mode)?;
                     } else {
-                        self.lex_number(NumberLexingMode::Normal);
+                        self.lex_number(NumberLexingMode::Normal)?;
                     }
                 } else {
                     return Err(CompilerError::Lexer {
@@ -306,16 +307,18 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn lex_number(&mut self, lexing_mode: NumberLexingMode) {
+    fn lex_number(&mut self, lexing_mode: NumberLexingMode) -> Result<(), CompilerError> {
         match lexing_mode {
-            NumberLexingMode::Normal => self.lex_normal_number(),
+            NumberLexingMode::Normal => self.lex_normal_number()?,
             NumberLexingMode::Binary => self.lex_binary(),
             NumberLexingMode::Hexal => self.lex_hex(),
             NumberLexingMode::Octal => self.lex_oct(),
         }
+
+        Ok(())
     }
 
-    fn lex_normal_number(&mut self) {
+    fn lex_normal_number(&mut self) -> Result<(), CompilerError> {
         let mut is_float = false;
         while let Some(ch) = self.peek() {
             if !ch.is_numeric() && !matches!(ch, '.' | '_') {
@@ -330,6 +333,22 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
+        // Lex suffix
+        let mut suffix = String::new();
+        let suffix_start = self.current;
+        while let Some(ch) = self.peek() {
+            if ch.is_alphanumeric() {
+                suffix.push(ch);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        if !suffix.is_empty() {
+            TolType::from_suffix(&suffix, suffix_start)?;
+        }
+
         let lexed = &self.source_code[self.start..self.current];
         let number_without_underscores: String = lexed.chars().filter(|&c| c != '_').collect();
 
@@ -338,6 +357,8 @@ impl<'a> Lexer<'a> {
         } else {
             self.add_token(TokenKind::Integer, Some(&number_without_underscores));
         }
+
+        Ok(())
     }
 
     fn lex_binary(&mut self) {
