@@ -52,6 +52,10 @@ impl TypeResolver {
     pub fn resolve_type(ttype: &TolType) -> TolType {
         match ttype {
             TolType::UnknownIdentifier(_s) => todo!(),
+            TolType::Array { inner, size } => TolType::Array {
+                inner: Box::new(Self::resolve_type(inner)),
+                size: size.to_owned(),
+            },
             _ => ttype.to_owned(),
         }
     }

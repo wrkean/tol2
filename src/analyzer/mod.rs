@@ -360,6 +360,7 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
             ExprKind::Binary { .. } => self.analyze_binary(expr),
             ExprKind::Unary { .. } => self.analyze_unary(expr),
             ExprKind::FnCall { .. } => self.analyze_fncall(expr),
+            ExprKind::ArrayLiteral { .. } => self.analyze_array_literal(expr),
             ExprKind::StructLiteral { .. } => todo!(),
             ExprKind::Dummy => todo!(),
         }
@@ -594,6 +595,42 @@ impl<'ctx> SemanticAnalyzer<'ctx> {
                 })
             }
         }
+    }
+
+    fn analyze_array_literal(&mut self, array: Expr) -> Result<TypedExpr, CompilerError> {
+        let ExprKind::ArrayLiteral { mut elems } = array.kind else {
+            unreachable!()
+        };
+
+        if elems.is_empty() {
+            panic!("Empty arrays not allowed yet");
+            // return Ok(TypedExpr::new(TypedExprKind::ArrayLiteral { elems: Vec::new() }, TolType::Array { inner: Box::new(TolType::Unknown), size: None }));
+        }
+
+        let first_span = elems[0].span();
+        let elems_len = elems.len();
+
+        let mut typed_elems = Vec::new();
+        typed_elems.push(self.analyze_expression(elems.remove(0))?);
+
+        let elems_tail = elems.split_off(1);
+        let current = typed_elems[0].ttype.clone();
+        let ttype = TolType::Array {
+            inner: Box::new(current.clone()),
+            size: Some(elems_len),
+        };
+
+        for (i, elem) in elems_tail.into_iter().enumerate() {
+            let elem_span = elem.span();
+            typed_elems.push(self.analyze_expression(elem)?);
+
+            current.coerce_or_mismatch(&typed_elems[i].ttype, first_span.clone(), elem_span)?;
+        }
+
+        Ok(TypedExpr::new(
+            TypedExprKind::ArrayLiteral { elems: typed_elems },
+            ttype,
+        ))
     }
 
     fn infer_type(

@@ -89,6 +89,39 @@ impl TolType {
             (F32, UnsizedFloat) | (UnsizedFloat, F32) => Some(F32),
             (F64, UnsizedFloat) | (UnsizedFloat, F64) => Some(F64),
 
+            (
+                Array {
+                    inner: i1,
+                    size: Some(n1),
+                },
+                Array {
+                    inner: i2,
+                    size: Some(n2),
+                },
+            ) => {
+                if n1 < n2 {
+                    return None;
+                }
+
+                i1.coerce(i2).map(|t| TolType::Array {
+                    inner: Box::new(t),
+                    size: Some(*n1),
+                })
+            }
+            (
+                Array {
+                    inner: i1,
+                    size: None,
+                },
+                Array {
+                    inner: i2,
+                    size: Some(n),
+                },
+            ) => i1.coerce(i2).map(|t| TolType::Array {
+                inner: Box::new(t),
+                size: Some(*n),
+            }),
+
             _ => None,
         }
     }
